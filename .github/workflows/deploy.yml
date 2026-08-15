@@ -1,0 +1,48 @@
+name: Deploy NKB Authentication API to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'auth-api/**'
+      - 'ad-identity-service/**'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  deploy:
+    name: Deploy to Hostinger VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH to Hostinger
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          script: |
+            echo "🚀 Starting NKB Services Deployment on Hostinger..."
+            
+            # Navigate to project directory on Hostinger server
+            cd /var/www/nkb-login || cd ~/nkb-login
+            
+            # Pull latest changes from GitHub
+            git pull origin main
+            
+            # Install & reload Auth API
+            cd auth-api
+            npm install --production
+            pm2 restart nkb-auth-api || pm2 start src/server.js --name "nkb-auth-api"
+            
+            # Install & reload AD Identity Service
+            cd ../ad-identity-service
+            npm install --production
+            pm2 restart nkb-ad-service || pm2 start src/server.js --name "nkb-ad-service"
+            
+            pm2 save
+            echo "✅ Deployment to Hostinger completed successfully!"

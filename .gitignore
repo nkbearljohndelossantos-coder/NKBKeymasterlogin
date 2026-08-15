@@ -1,0 +1,29 @@
+# Dependency directories
+node_modules/
+build/
+bin/
+obj/
+credential-provider/build/
+
+# Environment configuration and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.pfx
+*.log
+
+# Compiled libraries & executables
+*.lib
+*.exp
+*.ilk
+*.pdb
+
+# IDE and OS files
+.vscode/
+.idea/
+*.suo
+*.user
+Thumbs.db
+[Dd]esktop.ini
