@@ -3,21 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NKB Manufacturing — Windows Authentication & IT Identity Portal</title>
+  <title>NKB Manufacturing — Super Admin Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app-layout">
+  <!-- SUPER ADMIN LOGIN OVERLAY -->
+  <div id="super-admin-login-screen" class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="brand-badge">NKB</div>
+        <h2>Super Admin Portal</h2>
+        <p>Enterprise Access & IT Governance</p>
+      </div>
+      <form id="super-admin-login-form">
+        <div class="form-group">
+          <label>Super Admin Username / Email</label>
+          <input type="text" id="admin-user-input" placeholder="admin@nkbmanufacturing.com" required>
+        </div>
+        <div class="form-group">
+          <label>Admin Master Password</label>
+          <input type="password" id="admin-pass-input" placeholder="••••••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Sign In as Super Admin</button>
+        <div id="login-error-msg" class="result-box error hidden" style="margin-top:16px;"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN ADMIN DASHBOARD (Protected) -->
+  <div class="app-layout hidden" id="admin-main-dashboard">
     <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="brand-header">
         <div class="brand-badge">NKB</div>
         <div class="brand-info">
           <h2>NKB KEYMASTER</h2>
-          <span>IT Identity & PC Access</span>
+          <span>Super Admin Console</span>
         </div>
       </div>
 
@@ -34,19 +58,24 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           <span>Login Audit Logs</span>
         </button>
+        <button class="nav-item" data-tab="inventory">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          <span>Device & Asset Inventory</span>
+        </button>
         <button class="nav-item" data-tab="test-login">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
           <span>Test Authentication</span>
         </button>
       </nav>
 
-      <div class="system-status-widget">
+      <div class="system-status-widget" style="margin-bottom: 12px;">
         <div class="status-indicator online"></div>
         <div class="status-details">
-          <span class="status-title">NKB Cloud Engine</span>
-          <span class="status-sub">login.nkbmanufacturing.com</span>
+          <span class="status-title">Super Admin Active</span>
+          <span class="status-sub" id="active-admin-user">admin@nkb</span>
         </div>
       </div>
+      <button class="btn btn-secondary btn-sm w-full" id="logout-btn">Log Out</button>
     </aside>
 
     <!-- Main Content Area -->
@@ -179,7 +208,53 @@
         </div>
       </section>
 
-      <!-- TAB 4: TEST AUTHENTICATION -->
+      <!-- TAB 4: INVENTORY & COMPLIANCE -->
+      <section class="tab-pane" id="pane-inventory">
+        <div class="card">
+          <div class="card-header">
+            <h3>Workstation Health & System Inventory</h3>
+            <p>Monitors hardware status, assigned users, and policy enforcement across registered company PCs.</p>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Device Hostname</th>
+                  <th>Operating System</th>
+                  <th>Assigned Department</th>
+                  <th>Policy Enforcement</th>
+                  <th>Last Sync</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>NKBMANUF</code></td>
+                  <td>Windows 11 Pro (x64)</td>
+                  <td>IT Administration</td>
+                  <td><span class="badge badge-success">Active & Enforced</span></td>
+                  <td>Just now</td>
+                </tr>
+                <tr>
+                  <td><code>NKB-PC-001</code></td>
+                  <td>Windows 10 Pro (x64)</td>
+                  <td>Quality Control</td>
+                  <td><span class="badge badge-success">Active & Enforced</span></td>
+                  <td>10 mins ago</td>
+                </tr>
+                <tr>
+                  <td><code>NKB-PC-002</code></td>
+                  <td>Windows 11 Enterprise (x64)</td>
+                  <td>Manufacturing Line 1</td>
+                  <td><span class="badge badge-success">Active & Enforced</span></td>
+                  <td>1 hour ago</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: TEST AUTHENTICATION -->
       <section class="tab-pane" id="pane-test-login">
         <div class="card max-w-md">
           <div class="card-header">

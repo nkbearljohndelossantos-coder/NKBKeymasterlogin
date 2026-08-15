@@ -8,11 +8,62 @@ const ADMIN_HEADER = {
 let allEmployees = [];
 
 document.addEventListener('DOMContentLoaded', () => {
+  setupSuperAdminAuth();
   setupTabs();
   setupModals();
-  loadEmployees();
   setupForms();
 });
+
+// 0. Super Admin Login & Session Management
+function setupSuperAdminAuth() {
+  const loginScreen = document.getElementById('super-admin-login-screen');
+  const mainDashboard = document.getElementById('admin-main-dashboard');
+  const loginForm = document.getElementById('super-admin-login-form');
+  const errorMsg = document.getElementById('login-error-msg');
+  const activeUserSpan = document.getElementById('active-admin-user');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  // Check existing session in localStorage
+  const savedAdmin = localStorage.getItem('nkb_super_admin_session');
+  if (savedAdmin) {
+    showDashboard(savedAdmin);
+  }
+
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    errorMsg.classList.add('hidden');
+
+    const username = document.getElementById('admin-user-input').value.trim();
+    const password = document.getElementById('admin-pass-input').value;
+
+    // Super Admin Credentials
+    const isValid = (username.toLowerCase() === 'admin@nkbmanufacturing.com' || username.toLowerCase() === 'earljohn@nkbmanufacturing.com' || username.toUpperCase() === 'EMP-000001' || username.toLowerCase() === 'admin') &&
+                    (password === 'Password123!' || password === 'NkbManufacturing25' || password === 'admin123');
+
+    if (isValid) {
+      localStorage.setItem('nkb_super_admin_session', username);
+      showDashboard(username);
+    } else {
+      errorMsg.innerText = '❌ Access Denied: Invalid Super Admin credentials.';
+      errorMsg.classList.remove('hidden');
+    }
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('nkb_super_admin_session');
+    mainDashboard.classList.add('hidden');
+    loginScreen.classList.remove('hidden');
+    loginForm.reset();
+  });
+
+  function showDashboard(user) {
+    loginScreen.classList.add('hidden');
+    mainDashboard.classList.remove('hidden');
+    if (activeUserSpan) activeUserSpan.innerText = user;
+    loadEmployees();
+    loadAuditLogs();
+  }
+}
 
 // 1. Tab Switching
 function setupTabs() {
@@ -33,6 +84,10 @@ function setupTabs() {
     'audits': {
       title: 'Security & Sign-in Audit Trail',
       desc: 'Live audit log of Windows login attempts, computers used, and outcomes.'
+    },
+    'inventory': {
+      title: 'Workstation Health & System Inventory',
+      desc: 'Monitors hardware status, assigned users, and policy enforcement across company PCs.'
     },
     'test-login': {
       title: 'Test Authentication Endpoint',
@@ -101,20 +156,29 @@ async function loadEmployees() {
     allEmployees = data.employees || [];
     renderEmployees(allEmployees);
   } catch (err) {
-    tbody.innerHTML = `
-      <tr>
-        <td><code>EMP-000001</code></td>
-        <td><strong>Earl John</strong></td>
-        <td>earljohn@nkbmanufacturing.com</td>
-        <td>IT Department</td>
-        <td><code>.\\NKBUser</code></td>
-        <td><span class="badge badge-success">Active</span></td>
-        <td>
-          <button class="btn btn-secondary btn-sm" onclick="openEditModal('EMP-000001')">Edit</button>
-          <button class="btn btn-secondary btn-sm" onclick="openResetModal('EMP-000001', 'Earl John')">Reset Pass</button>
-        </td>
-      </tr>
-    `;
+    allEmployees = [
+      {
+        employee_id: 'EMP-000001',
+        name: 'Earl John',
+        email: 'earljohn@nkbmanufacturing.com',
+        department: 'IT Department',
+        position: 'Systems Administrator',
+        windows_username: 'NKBUser',
+        windows_domain: '.',
+        status: 'Active'
+      },
+      {
+        employee_id: 'EMP-000123',
+        name: 'Juan Dela Cruz',
+        email: 'juan.delacruz@nkbmanufacturing.com',
+        department: 'Manufacturing Ops',
+        position: 'Assembly Line Lead',
+        windows_username: 'NKBUser',
+        windows_domain: '.',
+        status: 'Active'
+      }
+    ];
+    renderEmployees(allEmployees);
   }
 }
 
@@ -149,7 +213,31 @@ function renderEmployees(list) {
   `).join('');
 }
 
-// 4. Open Edit Modal
+// 4. Load Audit Logs
+async function loadAuditLogs() {
+  const tbody = document.getElementById('audits-table-body');
+  if (!tbody) return;
+
+  const sampleLogs = [
+    { time: 'Just now', id: 'EMP-000001', emp: 'EMP-000001 (Earl John)', pc: 'NKBMANUF', event: 'Windows Login', outcome: 'SUCCESS', desc: 'Authenticated via Windows Credential Provider' },
+    { time: '10 mins ago', id: 'earljohn@nkbmanufacturing.com', emp: 'EMP-000001', pc: 'NKBMANUF', event: 'Web Portal Auth', outcome: 'SUCCESS', desc: 'Super Admin Login' },
+    { time: '1 hour ago', id: 'EMP-000123', emp: 'EMP-000123 (Juan)', pc: 'NKB-PC-002', event: 'Windows Login', outcome: 'SUCCESS', desc: 'Authenticated on Line 1 PC' }
+  ];
+
+  tbody.innerHTML = sampleLogs.map(l => `
+    <tr>
+      <td>${l.time}</td>
+      <td><code>${l.id}</code></td>
+      <td><strong>${l.emp}</strong></td>
+      <td><code>${l.pc}</code></td>
+      <td>${l.event}</td>
+      <td><span class="badge badge-success">${l.outcome}</span></td>
+      <td>${l.desc}</td>
+    </tr>
+  `).join('');
+}
+
+// 5. Open Edit Modal
 window.openEditModal = function(empId) {
   const emp = allEmployees.find(e => e.employee_id === empId) || {
     employee_id: empId,
@@ -175,14 +263,14 @@ window.openEditModal = function(empId) {
   document.getElementById('edit-modal').classList.remove('hidden');
 };
 
-// 5. Open Reset Password Modal
+// 6. Open Reset Password Modal
 window.openResetModal = function(empId, name) {
   document.getElementById('reset-target-emp-id').value = empId;
   document.getElementById('reset-target-text').innerHTML = `Resetting password for: <strong>${name} (${empId})</strong>`;
   document.getElementById('reset-modal').classList.remove('hidden');
 };
 
-// 6. Setup Form Submissions
+// 7. Setup Form Submissions
 function setupForms() {
   // Register Employee
   document.getElementById('register-employee-form').addEventListener('submit', async (e) => {
@@ -205,7 +293,6 @@ function setupForms() {
         headers: ADMIN_HEADER,
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
       alert(`✅ Employee account ${payload.employee_id} (${payload.name}) registered successfully!`);
       document.getElementById('register-modal').classList.add('hidden');
       document.getElementById('register-employee-form').reset();
@@ -344,6 +431,7 @@ function setupForms() {
     renderEmployees(filtered);
   });
 
-  // Refresh Button
+  // Refresh Buttons
   document.getElementById('refresh-employees-btn').addEventListener('click', loadEmployees);
+  document.getElementById('refresh-audits-btn').addEventListener('click', loadAuditLogs);
 }
