@@ -1,11 +1,10 @@
 <?php
 // Hostinger MySQL Database Configuration
-// Edit these credentials to match your Hostinger Database
 
-define('DB_HOST', '127.0.0.1');
-define('DB_NAME', 'u123456_nkb_auth_db'); // Palitan ng Hostinger Database Name mo
-define('DB_USER', 'u123456_nkb_admin');   // Palitan ng Hostinger Database Username mo
-define('DB_PASS', 'NkbHostingerSecurePass2026!'); // Palitan ng Hostinger Database Password mo
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'u335953510_login_db');
+define('DB_USER', 'u335953510_login');
+define('DB_PASS', 'NkbManufacturing25');
 
 function getDB() {
     static $pdo = null;
@@ -23,7 +22,7 @@ function getDB() {
             echo json_encode([
                 'success' => false,
                 'error_code' => 'DATABASE_CONNECTION_ERROR',
-                'message' => 'Cannot connect to Hostinger MySQL database. Check db.php credentials.'
+                'message' => 'Cannot connect to Hostinger MySQL database: ' . $e->getMessage()
             ]);
             exit;
         }
