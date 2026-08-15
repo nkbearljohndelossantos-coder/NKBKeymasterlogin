@@ -199,9 +199,10 @@ const server = http.createServer((req, res) => {
     const parts = url.split('/');
     const empId = parts[parts.length - 1];
     readBody(req, body => {
-      const { name, email, department, position, status, windows_username, windows_domain } = body || {};
+      const { new_employee_id, name, email, department, position, status, windows_username, windows_domain } = body || {};
       const emp = memoryStore.employees.find(e => e.employee_id === empId);
       if (emp) {
+        if (new_employee_id) emp.employee_id = new_employee_id;
         if (name) emp.name = name;
         if (email) emp.email = email;
         if (department !== undefined) emp.department = department;

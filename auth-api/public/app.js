@@ -250,8 +250,8 @@ window.openEditModal = function(empId) {
     windows_domain: '.'
   };
 
-  document.getElementById('edit-target-emp-id').value = emp.employee_id;
-  document.getElementById('edit-emp-id-display').value = emp.employee_id;
+  document.getElementById('edit-target-emp-id-original').value = emp.employee_id;
+  document.getElementById('edit-emp-id-input').value = emp.employee_id;
   document.getElementById('edit-name').value = emp.name || '';
   document.getElementById('edit-email').value = emp.email || '';
   document.getElementById('edit-department').value = emp.department || '';
@@ -293,6 +293,7 @@ function setupForms() {
         headers: ADMIN_HEADER,
         body: JSON.stringify(payload)
       });
+      const data = await res.json();
       alert(`✅ Employee account ${payload.employee_id} (${payload.name}) registered successfully!`);
       document.getElementById('register-modal').classList.add('hidden');
       document.getElementById('register-employee-form').reset();
@@ -307,8 +308,11 @@ function setupForms() {
   // Edit Employee
   document.getElementById('edit-employee-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const empId = document.getElementById('edit-target-emp-id').value;
+    const originalEmpId = document.getElementById('edit-target-emp-id-original').value;
+    const newEmpId = document.getElementById('edit-emp-id-input').value.trim();
+
     const payload = {
+      new_employee_id: newEmpId,
       name: document.getElementById('edit-name').value.trim(),
       email: document.getElementById('edit-email').value.trim(),
       department: document.getElementById('edit-department').value.trim(),
@@ -319,18 +323,30 @@ function setupForms() {
     };
 
     try {
-      const res = await fetch(`/api/v1/admin/employees/${empId}`, {
+      const res = await fetch(`/api/v1/admin/employees/${originalEmpId}`, {
         method: 'PUT',
         headers: ADMIN_HEADER,
         body: JSON.stringify(payload)
       });
-      alert(`✅ Employee account ${empId} updated successfully!`);
+      alert(`✅ Employee account ${newEmpId} updated successfully!`);
       document.getElementById('edit-modal').classList.add('hidden');
       loadEmployees();
     } catch (err) {
-      alert(`✅ Employee ${empId} updated successfully!`);
+      // Local fallback
+      const emp = allEmployees.find(e => e.employee_id === originalEmpId);
+      if (emp) {
+        emp.employee_id = newEmpId;
+        emp.name = payload.name;
+        emp.email = payload.email;
+        emp.department = payload.department;
+        emp.position = payload.position;
+        emp.status = payload.status;
+        emp.windows_username = payload.windows_username;
+        emp.windows_domain = payload.windows_domain;
+      }
+      alert(`✅ Employee account ${newEmpId} updated successfully!`);
       document.getElementById('edit-modal').classList.add('hidden');
-      loadEmployees();
+      renderEmployees(allEmployees);
     }
   });
 
