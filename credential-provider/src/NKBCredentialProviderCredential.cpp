@@ -254,8 +254,8 @@ IFACEMETHODIMP NKBCredentialProviderCredential::GetSerialization(
     }
 
     // Step 1: Execute NKB REST API Authentication Verification Request
-    HttpClient client(apiHost, apiPort, useHttps);
-    AuthResult authRes = client.VerifyCredentials(m_pszIdentifier, m_pszPassword, szComputerName);
+    HttpClient client(apiHost, (INTERNET_PORT)apiPort, useHttps);
+    AuthResponse authRes = client.AuthenticateUser(m_pszIdentifier, m_pszPassword, szComputerName);
 
     if (!authRes.success)
     {
