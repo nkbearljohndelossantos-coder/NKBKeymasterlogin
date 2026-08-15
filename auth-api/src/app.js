@@ -18,6 +18,18 @@ app.use(express.urlencoded({ extended: true }));
 // Silence browser favicon requests with 204 No Content
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
+// Root Status Landing Route
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'ONLINE',
+    service: 'NKB Manufacturing Windows Authentication REST API',
+    version: '1.0.0',
+    health_check: '/health',
+    api_verify_endpoint: '/api/v1/auth/verify',
+    documentation: 'https://github.com/nkbearljohndelossantos-coder/NKBKeymasterlogin'
+  });
+});
+
 // Liveness check
 app.get('/health', (req, res) => {
   res.status(200).json({
