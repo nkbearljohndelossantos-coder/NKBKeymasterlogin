@@ -4,13 +4,16 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('./config/database');
 
 const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, HOST, () => {
   console.log(`=======================================================`);
-  console.log(` NKB Authentication REST API Running`);
+  console.log(` NKB Authentication REST API & Admin Portal Running`);
   console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(` Host: ${HOST}`);
   console.log(` Port: ${PORT}`);
-  console.log(` Endpoint: http://localhost:${PORT}/api/v1/auth/verify`);
+  console.log(` Web Portal: http://localhost:${PORT}/`);
+  console.log(` API Endpoint: http://localhost:${PORT}/api/v1/auth/verify`);
   console.log(`=======================================================`);
 });
 
