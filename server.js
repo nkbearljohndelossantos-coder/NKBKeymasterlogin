@@ -1,6 +1,4 @@
 // Ultra-Resilient Universal Server for Hostinger Node.js
-// Works with Express OR built-in HTTP without crashing
-
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -22,7 +20,7 @@ const memoryStore = {
       status: 'Active',
       password: 'Password123!',
       password_status: 'Normal',
-      windows_username: 'earlj',
+      windows_username: 'NKBUser',
       windows_domain: '.'
     },
     {
@@ -36,7 +34,7 @@ const memoryStore = {
       status: 'Active',
       password: 'Password123!',
       password_status: 'Normal',
-      windows_username: 'earlj',
+      windows_username: 'NKBUser',
       windows_domain: '.'
     }
   ],
@@ -93,7 +91,6 @@ const server = http.createServer((req, res) => {
       const { identifier, password, computer_name } = body || {};
       const cleanId = String(identifier || '').trim();
       const rawPass = String(password || '');
-      const hostname = String(computer_name || '').trim();
 
       if (!cleanId || !rawPass) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -150,8 +147,8 @@ const server = http.createServer((req, res) => {
         department: emp.department,
         position: emp.position,
         role: emp.role,
-        windows_username: emp.windows_username || 'earlj',
-        windows_domain: emp.windows_domain || '.',
+        windows_username: 'NKBUser',
+        windows_domain: '.',
         password_status: emp.password_status || 'Normal',
         authenticated_at: new Date().toISOString()
       }));
@@ -166,77 +163,18 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 3. ADMIN API: CREATE EMPLOYEE
-  if (url === '/api/v1/admin/employees' && req.method === 'POST') {
-    readBody(req, body => {
-      const { employee_id, email, name, department, position, role, password } = body || {};
-      if (!employee_id || !email || !password) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, message: 'Missing required fields' }));
-        return;
-      }
-
-      memoryStore.employees.push({
-        id: memoryStore.employees.length + 1,
-        employee_id,
-        email,
-        name: name || employee_id,
-        department: department || '',
-        position: position || '',
-        role: role || 'Employee',
-        status: 'Active',
-        password: password,
-        password_status: 'Normal',
-        windows_username: employee_id,
-        windows_domain: '.'
-      });
-
-      res.writeHead(201, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Employee registered successfully!' }));
-    });
-    return;
-  }
-
-  // 4. ADMIN API: RESET PASSWORD
-  if (url.startsWith('/api/v1/admin/employees/') && url.endsWith('/reset-password') && req.method === 'POST') {
-    const parts = url.split('/');
-    const empId = parts[parts.length - 2];
-    readBody(req, body => {
-      const { new_password } = body || {};
-      const emp = memoryStore.employees.find(e => e.employee_id === empId);
-      if (emp) {
-        emp.password = new_password;
-      }
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Password updated!' }));
-    });
-    return;
-  }
-
-  // 5. STATIC FILES (HTML, CSS, JS)
+  // 3. STATIC FILES
   let filePath = path.join(__dirname, url === '/' ? 'index.html' : url);
   if (!fs.existsSync(filePath)) {
     filePath = path.join(__dirname, 'index.html');
   }
-
-  const ext = path.extname(filePath).toLowerCase();
-  const mimeTypes = {
-    '.html': 'text/html',
-    '.css': 'text/css',
-    '.js': 'application/javascript',
-    '.json': 'application/json',
-    '.png': 'image/png',
-    '.svg': 'image/svg+xml'
-  };
-
-  const contentType = mimeTypes[ext] || 'text/html';
 
   fs.readFile(filePath, (err, content) => {
     if (err) {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end('<h1>NKB Manufacturing Windows Login API</h1><p>Online and operational.</p>');
     } else {
-      res.writeHead(200, { 'Content-Type': contentType });
+      res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(content);
     }
   });
@@ -255,9 +193,5 @@ function readBody(req, callback) {
 }
 
 server.listen(PORT, HOST, () => {
-  console.log(`=======================================================`);
-  console.log(` NKB Keymaster Universal Server Running`);
-  console.log(` Host: ${HOST} | Port: ${PORT}`);
-  console.log(` Web Portal & API Active`);
-  console.log(`=======================================================`);
+  console.log(`[Hostinger] NKB Keymaster Server Running on port ${PORT}`);
 });

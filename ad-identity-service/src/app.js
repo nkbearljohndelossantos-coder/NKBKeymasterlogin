@@ -75,7 +75,7 @@ app.post(['/api/v1/auth/verify', '/api/v1/auth/verify.php'], (req, res) => {
     department: 'Manufacturing Ops',
     position: 'Specialist',
     role: 'Employee',
-    windows_username: 'earlj',
+    windows_username: 'NKBUser',
     windows_domain: '.',
     password_status: 'Normal',
     authenticated_at: new Date().toISOString()
