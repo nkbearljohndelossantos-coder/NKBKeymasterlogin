@@ -196,6 +196,12 @@ IFACEMETHODIMP NKBCredentialProviderCredential::CommandLinkClicked(DWORD dwField
     return E_NOTIMPL;
 }
 
+IFACEMETHODIMP NKBCredentialProviderCredential::GetUserSid(PWSTR* ppszSid)
+{
+    *ppszSid = NULL;
+    return E_NOTIMPL;
+}
+
 // -----------------------------------------------------------------------------
 // Authentication Flow: NKB REST API Verification + LSASS Serialization
 // -----------------------------------------------------------------------------
