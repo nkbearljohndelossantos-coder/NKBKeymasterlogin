@@ -4,10 +4,15 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
+#ifndef SECURITY_WIN32
+#define SECURITY_WIN32
+#endif
+
 #include <windows.h>
 #include <strsafe.h>
 #include <credentialprovider.h>
 #include <ntsecapi.h>
+#include <security.h>
 #include <winhttp.h>
 #include <string>
 

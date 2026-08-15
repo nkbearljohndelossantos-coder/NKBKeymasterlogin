@@ -1,26 +1,36 @@
 #include "../include/NKBCredentialProviderCredential.h"
 #include "../include/HttpClient.h"
 #include <shlwapi.h>
+#include <security.h>
 
 #pragma comment(lib, "shlwapi.lib")
+#pragma comment(lib, "secur32.lib")
 
 NKBCredentialProviderCredential::NKBCredentialProviderCredential()
     : m_cRef(1), m_pPCE(NULL), m_pszIdentifier(NULL), m_pszPassword(NULL),
-      m_pszStatusText(NULL), m_windowsDomain(L"NKB"), m_windowsUsername(L""), m_authenticated(false)
+      m_pszStatusText(NULL), m_authenticated(false),
+      m_windowsDomain(L"."), m_windowsUsername(L"NKBUser")
 {
 }
 
 NKBCredentialProviderCredential::~NKBCredentialProviderCredential()
 {
-    if (m_pszIdentifier) { CoTaskMemFree(m_pszIdentifier); m_pszIdentifier = NULL; }
+    if (m_pszIdentifier)
+    {
+        CoTaskMemFree(m_pszIdentifier);
+        m_pszIdentifier = NULL;
+    }
     if (m_pszPassword)
     {
-        SAFE_ZERO_MEMORY(m_pszPassword, wcslen(m_pszPassword) * sizeof(wchar_t));
+        RtlSecureZeroMemory(m_pszPassword, wcslen(m_pszPassword) * sizeof(wchar_t));
         CoTaskMemFree(m_pszPassword);
         m_pszPassword = NULL;
     }
-    if (m_pszStatusText) { CoTaskMemFree(m_pszStatusText); m_pszStatusText = NULL; }
-    if (m_pPCE) { m_pPCE->Release(); m_pPCE = NULL; }
+    if (m_pszStatusText)
+    {
+        CoTaskMemFree(m_pszStatusText);
+        m_pszStatusText = NULL;
+    }
 }
 
 // IUnknown Implementation
@@ -28,7 +38,6 @@ IFACEMETHODIMP NKBCredentialProviderCredential::QueryInterface(REFIID riid, void
 {
     static const QITAB qit[] = {
         QITABENT(NKBCredentialProviderCredential, ICredentialProviderCredential),
-        QITABENT(NKBCredentialProviderCredential, ICredentialProviderCredential2),
         { 0 },
     };
     return QISearch(this, qit, riid, ppv);
@@ -76,11 +85,6 @@ IFACEMETHODIMP NKBCredentialProviderCredential::SetDeselected()
     return S_OK;
 }
 
-IFACEMETHODIMP NKBCredentialProviderCredential::SetDormant(BOOL bDormant)
-{
-    return S_OK;
-}
-
 IFACEMETHODIMP NKBCredentialProviderCredential::GetFieldState(
     DWORD dwFieldID,
     CREDENTIAL_PROVIDER_FIELD_STATE* pcpfs,
@@ -92,16 +96,13 @@ IFACEMETHODIMP NKBCredentialProviderCredential::GetFieldState(
     {
     case NKB_FIELD_BRANDING_LABEL:
     case NKB_FIELD_IDENTIFIER_LABEL:
-        *pcpfs = CPFS_DISPLAY_IN_BOTH;
-        break;
     case NKB_FIELD_IDENTIFIER_INPUT:
     case NKB_FIELD_PASSWORD_INPUT:
     case NKB_FIELD_SUBMIT_BUTTON:
         *pcpfs = CPFS_DISPLAY_IN_BOTH;
-        *pcpfis = CPFIS_FOCUSED;
         break;
     case NKB_FIELD_STATUS_LABEL:
-        *pcpfs = m_pszStatusText ? CPFS_DISPLAY_IN_BOTH : CPFS_HIDDEN;
+        *pcpfs = (m_pszStatusText && wcslen(m_pszStatusText) > 0) ? CPFS_DISPLAY_IN_BOTH : CPFS_HIDDEN;
         break;
     default:
         *pcpfs = CPFS_HIDDEN;
@@ -113,36 +114,21 @@ IFACEMETHODIMP NKBCredentialProviderCredential::GetFieldState(
 IFACEMETHODIMP NKBCredentialProviderCredential::GetStringValue(DWORD dwFieldID, PWSTR* ppsz)
 {
     *ppsz = NULL;
-    HRESULT hr = S_OK;
-
     switch (dwFieldID)
     {
     case NKB_FIELD_BRANDING_LABEL:
-        hr = SHStrDupW(L"NKB MANUFACTURING", ppsz);
-        break;
+        return SHStrDupW(L"NKB MANUFACTURING", ppsz);
     case NKB_FIELD_IDENTIFIER_LABEL:
-        hr = SHStrDupW(L"NKB Email / ID Number", ppsz);
-        break;
+        return SHStrDupW(L"NKB Email / ID Number", ppsz);
     case NKB_FIELD_IDENTIFIER_INPUT:
-        if (m_pszIdentifier) hr = SHStrDupW(m_pszIdentifier, ppsz);
-        else hr = SHStrDupW(L"", ppsz);
-        break;
+        return SHStrDupW(m_pszIdentifier ? m_pszIdentifier : L"", ppsz);
     case NKB_FIELD_PASSWORD_INPUT:
-        if (m_pszPassword) hr = SHStrDupW(m_pszPassword, ppsz);
-        else hr = SHStrDupW(L"", ppsz);
-        break;
-    case NKB_FIELD_SUBMIT_BUTTON:
-        hr = SHStrDupW(L"Sign In", ppsz);
-        break;
+        return SHStrDupW(m_pszPassword ? m_pszPassword : L"", ppsz);
     case NKB_FIELD_STATUS_LABEL:
-        if (m_pszStatusText) hr = SHStrDupW(m_pszStatusText, ppsz);
-        else hr = SHStrDupW(L"", ppsz);
-        break;
+        return SHStrDupW(m_pszStatusText ? m_pszStatusText : L"", ppsz);
     default:
-        hr = E_INVALIDARG;
-        break;
+        return E_INVALIDARG;
     }
-    return hr;
 }
 
 IFACEMETHODIMP NKBCredentialProviderCredential::GetBitmapValue(DWORD dwFieldID, HBITMAP* phbmp)
@@ -163,7 +149,7 @@ IFACEMETHODIMP NKBCredentialProviderCredential::GetSubmitButtonValue(DWORD dwFie
         *pdwAdjacentTo = NKB_FIELD_PASSWORD_INPUT;
         return S_OK;
     }
-    return E_INVALIDARG;
+    return E_NOTIMPL;
 }
 
 IFACEMETHODIMP NKBCredentialProviderCredential::GetComboBoxValueCount(DWORD dwFieldID, DWORD* pcItems, DWORD* pdwSelectedItem)
@@ -178,22 +164,21 @@ IFACEMETHODIMP NKBCredentialProviderCredential::GetComboBoxValueAt(DWORD dwField
 
 IFACEMETHODIMP NKBCredentialProviderCredential::SetStringValue(DWORD dwFieldID, PCWSTR psz)
 {
-    HRESULT hr = S_OK;
-    if (dwFieldID == NKB_FIELD_IDENTIFIER_INPUT)
+    switch (dwFieldID)
     {
+    case NKB_FIELD_IDENTIFIER_INPUT:
         if (m_pszIdentifier) CoTaskMemFree(m_pszIdentifier);
-        hr = SHStrDupW(psz ? psz : L"", &m_pszIdentifier);
-    }
-    else if (dwFieldID == NKB_FIELD_PASSWORD_INPUT)
-    {
+        return SHStrDupW(psz, &m_pszIdentifier);
+    case NKB_FIELD_PASSWORD_INPUT:
         if (m_pszPassword)
         {
-            SAFE_ZERO_MEMORY(m_pszPassword, wcslen(m_pszPassword) * sizeof(wchar_t));
+            RtlSecureZeroMemory(m_pszPassword, wcslen(m_pszPassword) * sizeof(wchar_t));
             CoTaskMemFree(m_pszPassword);
         }
-        hr = SHStrDupW(psz ? psz : L"", &m_pszPassword);
+        return SHStrDupW(psz, &m_pszPassword);
+    default:
+        return S_OK;
     }
-    return hr;
 }
 
 IFACEMETHODIMP NKBCredentialProviderCredential::SetCheckboxValue(DWORD dwFieldID, BOOL bChecked)
@@ -211,6 +196,9 @@ IFACEMETHODIMP NKBCredentialProviderCredential::CommandLinkClicked(DWORD dwField
     return E_NOTIMPL;
 }
 
+// -----------------------------------------------------------------------------
+// Authentication Flow: NKB REST API Verification + LSASS Serialization
+// -----------------------------------------------------------------------------
 IFACEMETHODIMP NKBCredentialProviderCredential::GetSerialization(
     CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE* pcpgsr,
     CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION* pcpcs,
@@ -221,21 +209,53 @@ IFACEMETHODIMP NKBCredentialProviderCredential::GetSerialization(
     *ppszOptionalStatusText = NULL;
     *pcpsiStatusIcon = CPSI_NONE;
 
-    if (!m_pszIdentifier || wcslen(m_pszIdentifier) == 0 || !m_pszPassword || wcslen(m_pszPassword) == 0)
+    if (!m_pszIdentifier || wcslen(m_pszIdentifier) == 0 ||
+        !m_pszPassword || wcslen(m_pszPassword) == 0)
     {
-        SHStrDupW(L"Please enter both your NKB Email / ID Number and Password.", ppszOptionalStatusText);
+        SHStrDupW(L"Please enter your NKB Email or Employee ID and password.", ppszOptionalStatusText);
         *pcpsiStatusIcon = CPSI_ERROR;
         return S_OK;
     }
 
-    // Get current workstation computer name
-    wchar_t computerName[MAX_COMPUTERNAME_LENGTH + 1] = { 0 };
-    DWORD size = MAX_COMPUTERNAME_LENGTH + 1;
-    GetComputerNameW(computerName, &size);
+    // Retrieve Local Computer Hostname
+    wchar_t szComputerName[MAX_COMPUTERNAME_LENGTH + 1] = { 0 };
+    DWORD dwCompSize = ARRAYSIZE(szComputerName);
+    GetComputerNameW(szComputerName, &dwCompSize);
 
-    // Call NKB Authentication API
-    HttpClient client(L"127.0.0.1", 3000, false);
-    AuthResponse authRes = client.AuthenticateUser(m_pszIdentifier, m_pszPassword, computerName);
+    // Query Registry for API Endpoint Configuration
+    std::wstring apiHost = L"login.nkbmanufacturing.com";
+    int apiPort = 443;
+    bool useHttps = true;
+
+    HKEY hKey = NULL;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\NKB Manufacturing\\CredentialProvider", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+    {
+        wchar_t szHost[256] = { 0 };
+        DWORD cbHost = sizeof(szHost);
+        if (RegQueryValueExW(hKey, L"ApiHost", NULL, NULL, (LPBYTE)szHost, &cbHost) == ERROR_SUCCESS && wcslen(szHost) > 0)
+        {
+            apiHost = szHost;
+        }
+
+        DWORD dwPort = 0;
+        DWORD cbPort = sizeof(dwPort);
+        if (RegQueryValueExW(hKey, L"ApiPort", NULL, NULL, (LPBYTE)&dwPort, &cbPort) == ERROR_SUCCESS && dwPort > 0)
+        {
+            apiPort = (int)dwPort;
+        }
+
+        DWORD dwHttps = 0;
+        DWORD cbHttps = sizeof(dwHttps);
+        if (RegQueryValueExW(hKey, L"UseHttps", NULL, NULL, (LPBYTE)&dwHttps, &cbHttps) == ERROR_SUCCESS)
+        {
+            useHttps = (dwHttps != 0);
+        }
+        RegCloseKey(hKey);
+    }
+
+    // Step 1: Execute NKB REST API Authentication Verification Request
+    HttpClient client(apiHost, apiPort, useHttps);
+    AuthResult authRes = client.VerifyCredentials(m_pszIdentifier, m_pszPassword, szComputerName);
 
     if (!authRes.success)
     {
@@ -258,28 +278,26 @@ IFACEMETHODIMP NKBCredentialProviderCredential::GetSerialization(
     m_windowsUsername = authRes.windows_username;
     m_authenticated = true;
 
-    // Package MSV1_0_INTERACTIVE_LOGON structure for LSASS (LsaLogonUser)
+    // Package KERB_INTERACTIVE_LOGON structure for LSASS
     ULONG ulPackageId = 0;
-    
-    // Retrieve MSV1_0 Authentication Package ID from LSA
     HANDLE hLsa = NULL;
-    LsaConnectUntrusted(&hLsa);
-    if (hLsa)
+    NTSTATUS status = LsaConnectUntrusted(&hLsa);
+    if (status == 0 && hLsa)
     {
         LSA_STRING pkgName;
-        pkgName.Buffer = (PCHAR)"MSV1_0";
+        pkgName.Buffer = (PCHAR)NEGOSSP_NAME_A; // "Negotiate" handles local & domain accounts
         pkgName.Length = (USHORT)strlen(pkgName.Buffer);
         pkgName.MaximumLength = pkgName.Length + 1;
         LsaLookupAuthenticationPackage(hLsa, &pkgName, &ulPackageId);
         LsaDeregisterLogonProcess(hLsa);
     }
 
-    // Allocate MSV1_0_INTERACTIVE_LOGON buffer
-    size_t domainBytes = (m_windowsDomain.length() + 1) * sizeof(wchar_t);
-    size_t userBytes = (m_windowsUsername.length() + 1) * sizeof(wchar_t);
-    size_t passBytes = (wcslen(m_pszPassword) + 1) * sizeof(wchar_t);
-    
-    DWORD cbSerialization = (DWORD)(sizeof(MSV1_0_INTERACTIVE_LOGON) + domainBytes + userBytes + passBytes);
+    // Calculate buffer size with relative offsets
+    DWORD cbDomain = (DWORD)(m_windowsDomain.length() * sizeof(wchar_t));
+    DWORD cbUser = (DWORD)(m_windowsUsername.length() * sizeof(wchar_t));
+    DWORD cbPassword = (DWORD)(wcslen(m_pszPassword) * sizeof(wchar_t));
+
+    DWORD cbSerialization = (DWORD)(sizeof(KERB_INTERACTIVE_LOGON) + cbDomain + sizeof(wchar_t) + cbUser + sizeof(wchar_t) + cbPassword + sizeof(wchar_t));
     BYTE* pBuffer = (BYTE*)CoTaskMemAlloc(cbSerialization);
 
     if (!pBuffer)
@@ -288,30 +306,39 @@ IFACEMETHODIMP NKBCredentialProviderCredential::GetSerialization(
     }
 
     RtlZeroMemory(pBuffer, cbSerialization);
-    MSV1_0_INTERACTIVE_LOGON* pLogon = (MSV1_0_INTERACTIVE_LOGON*)pBuffer;
-    pLogon->MessageType = MsV1_0InteractiveLogon;
+    KERB_INTERACTIVE_LOGON* pLogon = (KERB_INTERACTIVE_LOGON*)pBuffer;
+    pLogon->MessageType = KerbInteractiveLogon;
 
-    BYTE* pOffset = pBuffer + sizeof(MSV1_0_INTERACTIVE_LOGON);
+    BYTE* pbOffset = pBuffer + sizeof(KERB_INTERACTIVE_LOGON);
 
-    // Copy Domain
-    memcpy(pOffset, m_windowsDomain.c_str(), domainBytes);
-    pLogon->LogonDomainName.Buffer = (PWSTR)pOffset;
-    pLogon->LogonDomainName.Length = (USHORT)(domainBytes - sizeof(wchar_t));
-    pLogon->LogonDomainName.MaximumLength = (USHORT)domainBytes;
-    pOffset += domainBytes;
+    // 1. LogonDomainName (Offset relative to start of pBuffer)
+    pLogon->LogonDomainName.Length = (USHORT)cbDomain;
+    pLogon->LogonDomainName.MaximumLength = (USHORT)(cbDomain + sizeof(wchar_t));
+    pLogon->LogonDomainName.Buffer = (PWSTR)(pbOffset - pBuffer);
+    if (cbDomain > 0)
+    {
+        memcpy(pbOffset, m_windowsDomain.c_str(), cbDomain);
+    }
+    pbOffset += (cbDomain + sizeof(wchar_t));
 
-    // Copy Username
-    memcpy(pOffset, m_windowsUsername.c_str(), userBytes);
-    pLogon->UserName.Buffer = (PWSTR)pOffset;
-    pLogon->UserName.Length = (USHORT)(userBytes - sizeof(wchar_t));
-    pLogon->UserName.MaximumLength = (USHORT)userBytes;
-    pOffset += userBytes;
+    // 2. UserName (Offset relative to start of pBuffer)
+    pLogon->UserName.Length = (USHORT)cbUser;
+    pLogon->UserName.MaximumLength = (USHORT)(cbUser + sizeof(wchar_t));
+    pLogon->UserName.Buffer = (PWSTR)(pbOffset - pBuffer);
+    if (cbUser > 0)
+    {
+        memcpy(pbOffset, m_windowsUsername.c_str(), cbUser);
+    }
+    pbOffset += (cbUser + sizeof(wchar_t));
 
-    // Copy Password
-    memcpy(pOffset, m_pszPassword, passBytes);
-    pLogon->Password.Buffer = (PWSTR)pOffset;
-    pLogon->Password.Length = (USHORT)(passBytes - sizeof(wchar_t));
-    pLogon->Password.MaximumLength = (USHORT)passBytes;
+    // 3. Password (Offset relative to start of pBuffer)
+    pLogon->Password.Length = (USHORT)cbPassword;
+    pLogon->Password.MaximumLength = (USHORT)(cbPassword + sizeof(wchar_t));
+    pLogon->Password.Buffer = (PWSTR)(pbOffset - pBuffer);
+    if (cbPassword > 0)
+    {
+        memcpy(pbOffset, m_pszPassword, cbPassword);
+    }
 
     // Return Credential Serialization
     pcpcs->clsidCredentialProvider = CLSID_NKBCredentialProvider;
@@ -338,10 +365,4 @@ IFACEMETHODIMP NKBCredentialProviderCredential::ReportResult(
         *pcpsiStatusIcon = CPSI_ERROR;
     }
     return S_OK;
-}
-
-IFACEMETHODIMP NKBCredentialProviderCredential::GetUserSid(PWSTR* ppszSid)
-{
-    *ppszSid = NULL;
-    return E_NOTIMPL;
 }
