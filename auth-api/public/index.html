@@ -43,8 +43,8 @@
       <div class="system-status-widget">
         <div class="status-indicator online"></div>
         <div class="status-details">
-          <span class="status-title">NKB Auth Engine</span>
-          <span class="status-sub">Cloud API Online</span>
+          <span class="status-title">NKB Cloud Engine</span>
+          <span class="status-sub">login.nkbmanufacturing.com</span>
         </div>
       </div>
     </aside>
@@ -55,7 +55,7 @@
       <header class="top-header">
         <div class="header-titles">
           <h1 id="page-title">Employees & Accounts</h1>
-          <p id="page-description">Manage employee login credentials, NKB emails, and Windows mapping.</p>
+          <p id="page-description">Manage employee login credentials, NKB emails, passwords, and Windows mapping.</p>
         </div>
         <div class="header-actions">
           <button class="btn btn-primary" id="open-register-modal-btn">
@@ -80,10 +80,10 @@
                   <th>Employee ID</th>
                   <th>Full Name</th>
                   <th>NKB Email</th>
-                  <th>Department</th>
+                  <th>Department / Position</th>
                   <th>Windows Mapping</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th style="min-width: 180px;">Actions</th>
                 </tr>
               </thead>
               <tbody id="employees-table-body">
@@ -207,7 +207,7 @@
     </main>
   </div>
 
-  <!-- MODAL: REGISTER EMPLOYEE -->
+  <!-- MODAL 1: REGISTER EMPLOYEE -->
   <div class="modal-overlay hidden" id="register-modal">
     <div class="modal-card">
       <div class="modal-header">
@@ -251,6 +251,17 @@
           </div>
         </div>
 
+        <div class="form-row">
+          <div class="form-group">
+            <label>Windows Login Username *</label>
+            <input type="text" id="reg-win-user" placeholder="NKBUser (or local username)" value="NKBUser" required>
+          </div>
+          <div class="form-group">
+            <label>Windows Domain</label>
+            <input type="text" id="reg-win-domain" placeholder=". (or NKB)" value="." required>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Password *</label>
           <input type="password" id="reg-password" placeholder="Enter password (e.g. Password123!)" required>
@@ -264,7 +275,73 @@
     </div>
   </div>
 
-  <!-- MODAL: RESET PASSWORD -->
+  <!-- MODAL 2: EDIT EMPLOYEE ACCOUNT -->
+  <div class="modal-overlay hidden" id="edit-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Edit Employee Account & Windows Mapping</h3>
+        <button class="modal-close-btn" id="close-edit-modal-btn">&times;</button>
+      </div>
+      <form id="edit-employee-form">
+        <input type="hidden" id="edit-target-emp-id">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Employee ID (Read Only)</label>
+            <input type="text" id="edit-emp-id-display" readonly style="opacity: 0.7;">
+          </div>
+          <div class="form-group">
+            <label>NKB Email Address *</label>
+            <input type="email" id="edit-email" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="edit-name" required>
+          </div>
+          <div class="form-group">
+            <label>Department</label>
+            <input type="text" id="edit-department">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Position</label>
+            <input type="text" id="edit-position">
+          </div>
+          <div class="form-group">
+            <label>Account Status</label>
+            <select id="edit-status">
+              <option value="Active">Active</option>
+              <option value="Disabled">Disabled</option>
+              <option value="Locked">Locked</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Windows Login Username *</label>
+            <input type="text" id="edit-win-user" placeholder="NKBUser or earlj" required>
+          </div>
+          <div class="form-group">
+            <label>Windows Domain</label>
+            <input type="text" id="edit-win-domain" placeholder=". or NKB" required>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancel-edit-modal-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: RESET PASSWORD -->
   <div class="modal-overlay hidden" id="reset-modal">
     <div class="modal-card">
       <div class="modal-header">
@@ -277,7 +354,7 @@
 
         <div class="form-group">
           <label>New Password *</label>
-          <input type="password" id="reset-new-password" placeholder="Enter new password" required>
+          <input type="password" id="reset-new-password" placeholder="Enter new password (e.g. Password123!)" required>
         </div>
 
         <div class="modal-footer">
