@@ -13,6 +13,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Silence browser favicon requests with 204 No Content
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // Liveness check (process alive)
 app.get('/health', (req, res) => {
   res.status(200).json({
