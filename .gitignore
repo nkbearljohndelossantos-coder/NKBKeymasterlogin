@@ -13,6 +13,7 @@ credential-provider/build/
 *.key
 *.pfx
 *.log
+*.zip
 
 # Compiled libraries & executables
 *.lib
