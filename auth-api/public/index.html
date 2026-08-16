@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260816_5">
+  <link rel="stylesheet" href="style.css?v=20260816_6">
 </head>
 <body>
   <!-- SUPER ADMIN LOGIN OVERLAY -->
@@ -67,17 +67,27 @@
         </button>
         <button class="nav-item" data-tab="test-login">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-          <span>Test Authentication</span>
+          <span>Test & Diagnostics</span>
         </button>
       </nav>
+
+      <!-- Live Database & System Status Indicators -->
+      <div class="system-status-widget" style="margin-bottom: 8px;">
+        <div class="status-indicator online" id="db-status-dot"></div>
+        <div class="status-details">
+          <span class="status-title" id="db-status-title">MySQL Database</span>
+          <span class="status-sub" id="db-status-sub">Checking connection...</span>
+        </div>
+      </div>
 
       <div class="system-status-widget" style="margin-bottom: 12px;">
         <div class="status-indicator online"></div>
         <div class="status-details">
-          <span class="status-title">Canteen Directory Ready</span>
+          <span class="status-title">Canteen Directory</span>
           <span class="status-sub" id="canteen-sync-status">Auto-Lookup Enabled</span>
         </div>
       </div>
+
       <button class="btn btn-secondary btn-sm w-full" id="logout-btn">Log Out</button>
     </aside>
 
@@ -90,6 +100,9 @@
           <p id="page-description">Manage employees authorized with Windows login access, passwords, roles, and PC credentials.</p>
         </div>
         <div class="header-actions" style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" id="test-db-btn" title="Run diagnostic test on MySQL Database">
+            <span>⚡ Test MySQL DB</span>
+          </button>
           <button class="btn btn-primary" id="open-register-modal-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             <span>Register New Employee</span>
@@ -234,29 +247,46 @@
         </div>
       </section>
 
-      <!-- TAB 5: TEST AUTHENTICATION -->
+      <!-- TAB 5: TEST AUTHENTICATION & DIAGNOSTICS -->
       <section class="tab-pane" id="pane-test-login">
-        <div class="card max-w-md">
-          <div class="card-header">
-            <h3>Simulate Windows Credential Provider Login</h3>
-            <p>Test if an Employee ID authenticates cleanly for PC login.</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <!-- Left: Auth Simulator -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Simulate Windows Credential Provider Login</h3>
+              <p>Test if an Employee ID authenticates cleanly for PC login.</p>
+            </div>
+            <form id="test-login-form">
+              <div class="form-group">
+                <label>NKB Email / Employee ID</label>
+                <input type="text" id="test-identifier" placeholder="e.g. EMP-000001 or NKB052026-0031" required>
+              </div>
+              <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="test-password" placeholder="Enter password (e.g. Password123!)" required>
+              </div>
+              <div class="form-group">
+                <label>Computer Hostname</label>
+                <input type="text" id="test-computer" value="NKBMANUF" required>
+              </div>
+              <button type="submit" class="btn btn-primary w-full">Verify Credentials</button>
+            </form>
+            <div id="test-login-result" class="result-box hidden"></div>
           </div>
-          <form id="test-login-form">
-            <div class="form-group">
-              <label>NKB Email / Employee ID</label>
-              <input type="text" id="test-identifier" placeholder="e.g. EMP-000001 or NKB052026-0031" required>
+
+          <!-- Right: Database Live Diagnostic Panel -->
+          <div class="card">
+            <div class="card-header">
+              <h3>MySQL Database Diagnostic Inspector</h3>
+              <p>Test live connectivity, ping latency, and database table health in Hostinger.</p>
             </div>
-            <div class="form-group">
-              <label>Password</label>
-              <input type="password" id="test-password" placeholder="Enter password (e.g. Password123!)" required>
+            <div style="margin-bottom: 16px;">
+              <button class="btn btn-secondary w-full" id="run-db-diagnostic-btn">
+                <span>⚡ Run Live MySQL Health Check</span>
+              </button>
             </div>
-            <div class="form-group">
-              <label>Computer Hostname</label>
-              <input type="text" id="test-computer" value="NKBMANUF" required>
-            </div>
-            <button type="submit" class="btn btn-primary w-full">Verify Credentials</button>
-          </form>
-          <div id="test-login-result" class="result-box hidden"></div>
+            <div id="db-diagnostic-result" class="result-box hidden" style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; line-height: 1.6;"></div>
+          </div>
         </div>
       </section>
     </main>
@@ -441,6 +471,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260816_v5"></script>
+  <script src="app.js?v=20260816_v6"></script>
 </body>
 </html>
