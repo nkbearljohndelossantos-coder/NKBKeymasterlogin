@@ -70,7 +70,6 @@ function syncEmployeesFromCanteen(callback) {
                 barcode: cEmp.barcode_number || cleanId
               });
             } else {
-              // Update status and details from Canteen API while preserving custom passwords
               existing.name = cleanName;
               if (cEmp.department) existing.department = cEmp.department;
               if (cEmp.position) existing.position = cEmp.position;
@@ -113,17 +112,18 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const url = req.url.split('?')[0];
+  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = parsedUrl.pathname;
 
   // Favicon handler
-  if (url === '/favicon.ico') {
+  if (pathname === '/favicon.ico') {
     res.writeHead(204);
     res.end();
     return;
   }
 
   // Health Checks
-  if (url === '/health' || url === '/health/liveness' || url === '/health/readiness') {
+  if (pathname === '/health' || pathname === '/health/liveness' || pathname === '/health/readiness') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       status: 'UP',
@@ -137,7 +137,7 @@ const server = http.createServer((req, res) => {
   }
 
   // 1. API: VERIFY WINDOWS LOGIN (/api/v1/auth/verify)
-  if (url === '/api/v1/auth/verify' || url === '/api/v1/auth/verify.php') {
+  if (pathname === '/api/v1/auth/verify' || pathname === '/api/v1/auth/verify.php') {
     if (req.method !== 'POST') {
       res.writeHead(405, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: false, message: 'Method Not Allowed' }));
@@ -159,13 +159,11 @@ const server = http.createServer((req, res) => {
         return;
       }
 
-      // Check in local cache / Canteen employees
       let emp = memoryStore.employees.find(e =>
         e.email.toLowerCase() === cleanId.toLowerCase() ||
         e.employee_id.toUpperCase() === cleanId.toUpperCase()
       );
 
-      // Emergency Earl John Fallback
       if (!emp && (cleanId.toLowerCase() === 'earljohn@nkbmanufacturing.com' || cleanId.toUpperCase() === 'EMP-000001')) {
         emp = memoryStore.employees[0];
       }
@@ -190,7 +188,6 @@ const server = http.createServer((req, res) => {
         return;
       }
 
-      // Password Validation (Accepts custom updated password OR initial default Password123!)
       if (rawPass !== emp.password && rawPass !== 'Password123!') {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
@@ -201,7 +198,6 @@ const server = http.createServer((req, res) => {
         return;
       }
 
-      // Record Audit Log
       memoryStore.audits.unshift({
         time: 'Just now',
         id: cleanId,
@@ -232,7 +228,7 @@ const server = http.createServer((req, res) => {
   }
 
   // 2. ADMIN API: GET EMPLOYEES
-  if (url === '/api/v1/admin/employees' && req.method === 'GET') {
+  if (pathname === '/api/v1/admin/employees' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       employees: memoryStore.employees,
@@ -242,8 +238,34 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 3. ADMIN API: FORCE SYNC WITH CANTEEN API
-  if (url === '/api/v1/admin/canteen/sync' && req.method === 'POST') {
+  // 3. ADMIN API: REAL-TIME LOOKUP BY ID / BARCODE
+  if (pathname === '/api/v1/admin/canteen/lookup' && req.method === 'GET') {
+    const queryId = String(parsedUrl.searchParams.get('id') || '').trim().toUpperCase();
+    if (!queryId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, message: 'ID query parameter is required' }));
+      return;
+    }
+
+    const match = memoryStore.employees.find(e =>
+      e.employee_id.toUpperCase() === queryId ||
+      (e.barcode && e.barcode.toUpperCase() === queryId) ||
+      e.employee_id.toUpperCase().endsWith(queryId) ||
+      (e.barcode && e.barcode.toUpperCase().endsWith(queryId))
+    );
+
+    if (match) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, employee: match }));
+    } else {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, message: 'Employee ID not found' }));
+    }
+    return;
+  }
+
+  // 4. ADMIN API: FORCE SYNC WITH CANTEEN API
+  if (pathname === '/api/v1/admin/canteen/sync' && req.method === 'POST') {
     syncEmployeesFromCanteen((err, employees) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
@@ -256,8 +278,8 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 4. ADMIN API: CREATE EMPLOYEE
-  if (url === '/api/v1/admin/employees' && req.method === 'POST') {
+  // 5. ADMIN API: CREATE EMPLOYEE
+  if (pathname === '/api/v1/admin/employees' && req.method === 'POST') {
     readBody(req, body => {
       const { employee_id, email, name, department, position, role, windows_username, windows_domain, password } = body || {};
       if (!employee_id || !email || !password) {
@@ -287,9 +309,9 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 5. ADMIN API: EDIT EMPLOYEE ACCOUNT
-  if (url.startsWith('/api/v1/admin/employees/') && !url.includes('reset-password') && !url.includes('computers') && req.method === 'PUT') {
-    const parts = url.split('/');
+  // 6. ADMIN API: EDIT EMPLOYEE ACCOUNT
+  if (pathname.startsWith('/api/v1/admin/employees/') && !pathname.includes('reset-password') && !pathname.includes('computers') && req.method === 'PUT') {
+    const parts = pathname.split('/');
     const empId = parts[parts.length - 1];
     readBody(req, body => {
       const { new_employee_id, name, email, department, position, status, windows_username, windows_domain } = body || {};
@@ -310,9 +332,9 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 6. ADMIN API: RESET PASSWORD
-  if (url.startsWith('/api/v1/admin/employees/') && url.endsWith('/reset-password') && req.method === 'POST') {
-    const parts = url.split('/');
+  // 7. ADMIN API: RESET PASSWORD
+  if (pathname.startsWith('/api/v1/admin/employees/') && pathname.endsWith('/reset-password') && req.method === 'POST') {
+    const parts = pathname.split('/');
     const empId = parts[parts.length - 2];
     readBody(req, body => {
       const { new_password } = body || {};
@@ -326,8 +348,8 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 7. STATIC FILES
-  let filePath = path.join(__dirname, url === '/' ? 'index.html' : url);
+  // 8. STATIC FILES
+  let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
   if (!fs.existsSync(filePath)) {
     filePath = path.join(__dirname, 'index.html');
   }

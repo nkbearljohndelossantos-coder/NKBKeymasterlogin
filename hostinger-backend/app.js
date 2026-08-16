@@ -6,6 +6,8 @@ const ADMIN_HEADER = {
   'x-admin-key': 'nkb-admin-dev-key'
 };
 
+const CANTEEN_DIRECT_API = 'https://canteen.nkbmanufacturing.com/api/integration/employees?api_key=NkbCanteenIntegrationSecretApiKey2026';
+
 let allEmployees = [];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupModals();
   setupAutoLookup();
   setupForms();
+  // Pre-load employees immediately
+  loadEmployees();
 });
 
 // 0. Super Admin Login & Session Management
@@ -25,7 +29,6 @@ function setupSuperAdminAuth() {
   const activeUserSpan = document.getElementById('active-admin-user');
   const logoutBtn = document.getElementById('logout-btn');
 
-  // Check existing session in localStorage
   const savedAdmin = localStorage.getItem('nkb_super_admin_session');
   if (savedAdmin) {
     showDashboard(savedAdmin);
@@ -38,7 +41,6 @@ function setupSuperAdminAuth() {
     const username = document.getElementById('admin-user-input').value.trim();
     const password = document.getElementById('admin-pass-input').value;
 
-    // Super Admin Credentials
     const isValid = (username.toLowerCase() === 'admin@nkbmanufacturing.com' || username.toLowerCase() === 'earljohn@nkbmanufacturing.com' || username.toUpperCase() === 'EMP-000001' || username.toLowerCase() === 'admin') &&
                     (password === 'Password123!' || password === 'NkbManufacturing25' || password === 'admin123');
 
@@ -121,10 +123,12 @@ function setupModals() {
   const editModal = document.getElementById('edit-modal');
   const resetModal = document.getElementById('reset-modal');
 
-  // Register Modal
   document.getElementById('open-register-modal-btn').addEventListener('click', () => {
     registerModal.classList.remove('hidden');
-    document.getElementById('reg-emp-id').focus();
+    const input = document.getElementById('reg-emp-id');
+    input.value = '';
+    document.getElementById('reg-canteen-match-hint').innerText = '';
+    setTimeout(() => input.focus(), 100);
   });
   document.getElementById('close-register-modal-btn').addEventListener('click', () => {
     registerModal.classList.add('hidden');
@@ -133,7 +137,6 @@ function setupModals() {
     registerModal.classList.add('hidden');
   });
 
-  // Edit Modal
   document.getElementById('close-edit-modal-btn').addEventListener('click', () => {
     editModal.classList.add('hidden');
   });
@@ -141,7 +144,6 @@ function setupModals() {
     editModal.classList.add('hidden');
   });
 
-  // Reset Modal
   document.getElementById('close-reset-modal-btn').addEventListener('click', () => {
     resetModal.classList.add('hidden');
   });
@@ -160,28 +162,55 @@ function setupAutoLookup() {
   const regDept = document.getElementById('reg-department');
   const regPos = document.getElementById('reg-position');
 
-  regEmpInput.addEventListener('input', (e) => {
-    const enteredId = e.target.value.trim().toUpperCase();
-    if (!enteredId) {
+  async function performLookup(val) {
+    const cleanQuery = val.trim().toUpperCase();
+    if (!cleanQuery) {
       matchHint.innerText = '';
       return;
     }
 
-    // Search in Canteen Synced Employees
-    const match = allEmployees.find(emp =>
-      emp.employee_id.toUpperCase() === enteredId ||
-      (emp.barcode && emp.barcode.toUpperCase() === enteredId)
+    // 1. Search in local memory store
+    let match = allEmployees.find(emp =>
+      (emp.employee_id && emp.employee_id.toUpperCase() === cleanQuery) ||
+      (emp.barcode && emp.barcode.toUpperCase() === cleanQuery) ||
+      (emp.employee_id && emp.employee_id.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanQuery.replace(/[^A-Z0-9]/g, ''))
     );
 
+    // Partial search if not found
+    if (!match && cleanQuery.length >= 4) {
+      match = allEmployees.find(emp =>
+        (emp.employee_id && emp.employee_id.toUpperCase().includes(cleanQuery)) ||
+        (emp.barcode && emp.barcode.toUpperCase().includes(cleanQuery))
+      );
+    }
+
+    // 2. If not found in local array, fetch from server endpoint or Canteen API
+    if (!match) {
+      try {
+        const res = await fetch(`/api/v1/admin/canteen/lookup?id=${encodeURIComponent(cleanQuery)}`, { headers: ADMIN_HEADER });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.employee) match = data.employee;
+        }
+      } catch (e) {}
+    }
+
+    // 3. Auto-populate Form Fields
     if (match) {
-      matchHint.innerText = `✨ Found: ${match.name} (${match.department || 'Operations'})`;
+      matchHint.innerHTML = `✨ <b>Found in Canteen:</b> ${match.name} (${match.department || 'Operations'})`;
       regName.value = match.name || '';
-      regDept.value = match.department || '';
-      regPos.value = match.position || '';
+      regDept.value = match.department || 'General Operations';
+      regPos.value = match.position || 'Staff';
       regEmail.value = match.email || `${match.employee_id.toLowerCase().replace(/[^a-z0-9]/g, '')}@nkbmanufacturing.com`;
     } else {
       matchHint.innerText = '';
     }
+  }
+
+  regEmpInput.addEventListener('input', (e) => performLookup(e.target.value));
+  regEmpInput.addEventListener('change', (e) => performLookup(e.target.value));
+  regEmpInput.addEventListener('paste', (e) => {
+    setTimeout(() => performLookup(regEmpInput.value), 50);
   });
 
   // Workstation PC ID preview
@@ -190,7 +219,7 @@ function setupAutoLookup() {
   if (assignEmpInput && assignPreview) {
     assignEmpInput.addEventListener('input', (e) => {
       const q = e.target.value.trim().toUpperCase();
-      const match = allEmployees.find(emp => emp.employee_id.toUpperCase() === q);
+      const match = allEmployees.find(emp => emp.employee_id && emp.employee_id.toUpperCase() === q);
       if (match) {
         assignPreview.innerText = `Employee: ${match.name} (${match.department || 'NKB'})`;
       } else {
@@ -200,20 +229,49 @@ function setupAutoLookup() {
   }
 }
 
-// 4. Load & Render Employees
+// 4. Load & Render Employees (Direct from Canteen API & Server)
 async function loadEmployees() {
   const tbody = document.getElementById('employees-table-body');
   try {
     const res = await fetch('/api/v1/admin/employees', { headers: ADMIN_HEADER });
     const data = await res.json();
     allEmployees = data.employees || [];
+
+    // If server has few records, fallback/enrich directly from Canteen API
+    if (allEmployees.length <= 2) {
+      try {
+        const canteenRes = await fetch(CANTEEN_DIRECT_API);
+        const canteenList = await canteenRes.json();
+        if (Array.isArray(canteenList) && canteenList.length > 0) {
+          canteenList.forEach(cEmp => {
+            const cleanId = String(cEmp.employee_id || '').trim();
+            if (!cleanId) return;
+            if (!allEmployees.find(e => e.employee_id && e.employee_id.toUpperCase() === cleanId.toUpperCase())) {
+              allEmployees.push({
+                employee_id: cleanId,
+                email: `${cleanId.toLowerCase().replace(/[^a-z0-9]/g, '')}@nkbmanufacturing.com`,
+                name: cEmp.name || cleanId,
+                department: cEmp.department || 'General Operations',
+                position: cEmp.position || 'Staff',
+                role: 'EMPLOYEE',
+                status: (cEmp.status || 'active').toLowerCase() === 'active' ? 'Active' : 'Disabled',
+                windows_username: 'NKBUser',
+                windows_domain: '.',
+                barcode: cEmp.barcode_number || cleanId
+              });
+            }
+          });
+        }
+      } catch (err) {}
+    }
+
     const syncStatus = document.getElementById('canteen-sync-status');
     if (syncStatus) {
       syncStatus.innerText = `${allEmployees.length} Employees Synced`;
     }
     renderEmployees(allEmployees);
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" class="loading-cell">Failed to fetch Canteen Directory. Click "Sync Canteen API" to reload.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="loading-cell">Loading Canteen Directory... Click "Sync Canteen API" to reload.</td></tr>`;
   }
 }
 
@@ -277,7 +335,7 @@ async function loadAuditLogs() {
 
 // 6. Open Edit Modal
 window.openEditModal = function(empId) {
-  const emp = allEmployees.find(e => e.employee_id.toUpperCase() === empId.toUpperCase()) || {
+  const emp = allEmployees.find(e => e.employee_id && e.employee_id.toUpperCase() === empId.toUpperCase()) || {
     employee_id: empId,
     email: `${empId.toLowerCase()}@nkbmanufacturing.com`,
     name: empId,
@@ -488,9 +546,9 @@ function setupForms() {
   document.getElementById('employee-search').addEventListener('input', (e) => {
     const q = e.target.value.toLowerCase();
     const filtered = allEmployees.filter(emp =>
-      emp.name.toLowerCase().includes(q) ||
-      emp.employee_id.toLowerCase().includes(q) ||
-      emp.email.toLowerCase().includes(q) ||
+      (emp.name && emp.name.toLowerCase().includes(q)) ||
+      (emp.employee_id && emp.employee_id.toLowerCase().includes(q)) ||
+      (emp.email && emp.email.toLowerCase().includes(q)) ||
       (emp.department && emp.department.toLowerCase().includes(q))
     );
     renderEmployees(filtered);
