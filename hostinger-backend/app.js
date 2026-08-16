@@ -1,12 +1,12 @@
 // NKB Keymaster IT Management Portal Client Logic
-// Dedicated Workstation Account Management with Instant Canteen Lookup
+// Dedicated Workstation Account Management with Role Modification & Canteen Lookup
 
 const ADMIN_HEADER = {
   'Content-Type': 'application/json',
   'x-admin-key': 'nkb-admin-dev-key'
 };
 
-// Canteen Directory for Instant Auto-Lookup (Used for searching & auto-filling registration forms)
+// Canteen Directory for Instant Auto-Lookup
 const CANTEEN_DIRECTORY = [
   {"id":1,"employee_id":"EMP-000001","name":"Earl John Delos Santos","department":"IT Administration","position":"Systems Administrator"},
   {"id":14,"employee_id":"NKB052026-0003","name":"Alonzo, Merry Jean I.","department":"Production","position":"Staff"},
@@ -101,7 +101,7 @@ const CANTEEN_DIRECTORY = [
   {"id":82,"employee_id":"PRJ2026-0031","name":"Valle, Leonard","department":"Production","position":"Staff"}
 ];
 
-// Active Workstation Accounts (Only authorized computer users)
+// Default Authorized Accounts
 const DEFAULT_AUTHORIZED_ACCOUNTS = [
   {
     id: 1,
@@ -117,7 +117,6 @@ const DEFAULT_AUTHORIZED_ACCOUNTS = [
   }
 ];
 
-// Load persisted accounts or fallback to default
 function getSavedAccounts() {
   const saved = localStorage.getItem('nkb_authorized_workstation_accounts');
   if (saved) {
@@ -212,7 +211,7 @@ function setupTabs() {
   const tabMeta = {
     'employees': {
       title: 'Authorized Workstation Computer Accounts',
-      desc: 'Employees authorized with Windows login access and PC credentials.'
+      desc: 'Employees authorized with Windows login access, roles, and PC credentials.'
     },
     'workstations': {
       title: 'Workstation PCs & Computer Access',
@@ -262,6 +261,7 @@ function setupModals() {
     input.value = '';
     document.getElementById('reg-canteen-match-hint').innerText = '';
     document.getElementById('register-employee-form').reset();
+    document.getElementById('reg-role').value = 'EMPLOYEE';
     document.getElementById('reg-win-user').value = 'NKBUser';
     document.getElementById('reg-win-domain').value = '.';
     document.getElementById('reg-password').value = 'Password123!';
@@ -304,7 +304,6 @@ function setupAutoLookup() {
     const cleanQ = query.trim().toUpperCase();
     const cleanQStripped = cleanQ.replace(/[^A-Z0-9]/g, '');
 
-    // Search Canteen master directory
     let match = CANTEEN_DIRECTORY.find(emp => {
       const empId = String(emp.employee_id || '').toUpperCase();
       return empId === cleanQ || empId.replace(/[^A-Z0-9]/g, '') === cleanQStripped;
@@ -369,7 +368,13 @@ function renderEmployees(list) {
     return;
   }
 
-  tbody.innerHTML = list.map(emp => `
+  tbody.innerHTML = list.map(emp => {
+    let roleBadgeClass = 'badge-success';
+    if (emp.role === 'SUPER_ADMIN') roleBadgeClass = 'badge-danger';
+    else if (emp.role === 'IT_ADMIN') roleBadgeClass = 'badge-info';
+    else if (emp.role === 'HR_MANAGER' || emp.role === 'SUPERVISOR') roleBadgeClass = 'badge-warning';
+
+    return `
     <tr>
       <td><code>${emp.employee_id}</code></td>
       <td>
@@ -378,7 +383,7 @@ function renderEmployees(list) {
       </td>
       <td>${emp.department || 'General'}${emp.position ? ` / ${emp.position}` : ''}</td>
       <td><code>${emp.windows_domain || '.'}\\${emp.windows_username || 'NKBUser'}</code></td>
-      <td><span class="badge ${emp.role === 'SUPER_ADMIN' ? 'badge-danger' : 'badge-success'}">${emp.role || 'EMPLOYEE'}</span></td>
+      <td><span class="badge ${roleBadgeClass}">${emp.role || 'EMPLOYEE'}</span></td>
       <td>
         <span class="badge ${emp.status === 'Active' ? 'badge-success' : 'badge-danger'}">
           ${emp.status || 'Active'}
@@ -397,7 +402,7 @@ function renderEmployees(list) {
         </button>` : ''}
       </td>
     </tr>
-  `).join('');
+  `}).join('');
 }
 
 // 5. Delete Account Function
@@ -411,7 +416,7 @@ window.deleteAccount = function(empId) {
   }
 };
 
-// 6. Open Edit Modal
+// 6. Open Edit Modal (Populates Role and details)
 window.openEditModal = function(empId) {
   const emp = registeredAccounts.find(e => e.employee_id && e.employee_id.toUpperCase() === String(empId).toUpperCase()) || {
     employee_id: empId,
@@ -419,6 +424,7 @@ window.openEditModal = function(empId) {
     name: empId,
     department: 'Manufacturing Ops',
     position: 'Specialist',
+    role: 'EMPLOYEE',
     status: 'Active',
     windows_username: 'NKBUser',
     windows_domain: '.'
@@ -430,6 +436,7 @@ window.openEditModal = function(empId) {
   document.getElementById('edit-email').value = emp.email || `${String(emp.employee_id).toLowerCase().replace(/[^a-z0-9]/g, '')}@nkbmanufacturing.com`;
   document.getElementById('edit-department').value = emp.department || '';
   document.getElementById('edit-position').value = emp.position || '';
+  document.getElementById('edit-role').value = emp.role || 'EMPLOYEE';
   document.getElementById('edit-status').value = emp.status || 'Active';
   document.getElementById('edit-win-user').value = emp.windows_username || 'NKBUser';
   document.getElementById('edit-win-domain').value = emp.windows_domain || '.';
@@ -469,18 +476,6 @@ async function loadAuditLogs() {
 
 // 9. Setup Form Submissions
 function setupForms() {
-  // Sync Canteen API Button (Refreshes Canteen Lookup Directory)
-  const syncBtn = document.getElementById('sync-canteen-btn');
-  if (syncBtn) {
-    syncBtn.addEventListener('click', () => {
-      syncBtn.innerHTML = '<span>⏳ Checking...</span>';
-      setTimeout(() => {
-        alert(`✅ Canteen API Connected!\n${CANTEEN_DIRECTORY.length} Employees available for instant registration auto-fill.`);
-        syncBtn.innerHTML = '<span>🔄 Sync Canteen API</span>';
-      }, 300);
-    });
-  }
-
   // Register Employee Account
   document.getElementById('register-employee-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -506,14 +501,14 @@ function setupForms() {
     }
 
     saveAccounts(registeredAccounts);
-    alert(`✅ Employee account ${payload.employee_id} (${payload.name}) registered with computer access!`);
+    alert(`✅ Employee account ${payload.employee_id} (${payload.name}) registered as ${payload.role}!`);
     document.getElementById('register-modal').classList.add('hidden');
     document.getElementById('register-employee-form').reset();
     renderEmployees(registeredAccounts);
     updateAccountCounter(registeredAccounts.length);
   });
 
-  // Edit Employee Account
+  // Edit Employee Account (Saves changed Role & Details)
   document.getElementById('edit-employee-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const originalEmpId = document.getElementById('edit-target-emp-id-original').value;
@@ -525,6 +520,7 @@ function setupForms() {
       email: document.getElementById('edit-email').value.trim(),
       department: document.getElementById('edit-department').value.trim(),
       position: document.getElementById('edit-position').value.trim(),
+      role: document.getElementById('edit-role').value,
       status: document.getElementById('edit-status').value,
       windows_username: document.getElementById('edit-win-user').value.trim(),
       windows_domain: document.getElementById('edit-win-domain').value.trim()
@@ -536,7 +532,7 @@ function setupForms() {
     }
 
     saveAccounts(registeredAccounts);
-    alert(`✅ Employee account ${newEmpId} updated successfully!`);
+    alert(`✅ Employee account ${newEmpId} updated! Role changed to: ${payload.role}`);
     document.getElementById('edit-modal').classList.add('hidden');
     renderEmployees(registeredAccounts);
   });
@@ -576,7 +572,6 @@ function setupForms() {
     resultBox.innerText = 'Verifying credentials against NKB Auth Engine...';
 
     const cleanId = document.getElementById('test-identifier').value.trim().toUpperCase();
-    const rawPass = document.getElementById('test-password').value;
 
     const match = registeredAccounts.find(emp => emp.employee_id && emp.employee_id.toUpperCase() === cleanId);
     if (match) {
@@ -608,6 +603,7 @@ function setupForms() {
       (emp.name && emp.name.toLowerCase().includes(q)) ||
       (emp.employee_id && emp.employee_id.toLowerCase().includes(q)) ||
       (emp.email && emp.email.toLowerCase().includes(q)) ||
+      (emp.role && emp.role.toLowerCase().includes(q)) ||
       (emp.department && emp.department.toLowerCase().includes(q))
     );
     renderEmployees(filtered);
