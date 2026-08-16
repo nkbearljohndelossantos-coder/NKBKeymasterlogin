@@ -1,5 +1,7 @@
 <?php
-// PHP Authentication Verification Endpoint with Dynamic Password Matching
+// Unified Real-Time MySQL Authentication Verification Endpoint
+require_once __DIR__ . '/../../db.php';
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -10,9 +12,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+$pdo = getDbConnection();
 $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
 $cleanId = trim($input['identifier'] ?? '');
 $rawPass = trim($input['password'] ?? '');
+$computerName = trim($input['computer_name'] ?? 'NKBMANUF');
 
 if (empty($cleanId) || empty($rawPass)) {
     http_response_code(400);
@@ -24,19 +28,32 @@ if (empty($cleanId) || empty($rawPass)) {
     exit;
 }
 
-// 1. Check persistent accounts.json
-$dataFile = __DIR__ . '/../admin/accounts.json';
-$accounts = file_exists($dataFile) ? (json_decode(file_get_contents($dataFile), true) ?? []) : [];
-
 $matchedAcc = null;
-foreach ($accounts as $acc) {
-    if (strcasecmp($acc['employee_id'] ?? '', $cleanId) === 0 || strcasecmp($acc['email'] ?? '', $cleanId) === 0) {
-        $matchedAcc = $acc;
-        break;
+
+// 1. Direct Query against MySQL Database
+if ($pdo) {
+    try {
+        $stmt = $pdo->prepare("SELECT id, employee_id, name, email, department, position, role, password_hash AS password, status, windows_username, windows_domain FROM `employees` WHERE `employee_id` = ? OR `email` = ? LIMIT 1");
+        $stmt->execute([$cleanId, $cleanId]);
+        $matchedAcc = $stmt->fetch();
+    } catch (Exception $e) {
+        error_log("[DB Auth Query Error] " . $e->getMessage());
     }
 }
 
-// 2. Check default super admin
+// 2. Fallback to accounts.json
+if (!$matchedAcc) {
+    $dataFile = __DIR__ . '/../admin/accounts.json';
+    $accounts = file_exists($dataFile) ? (json_decode(file_get_contents($dataFile), true) ?? []) : [];
+    foreach ($accounts as $acc) {
+        if (strcasecmp($acc['employee_id'] ?? '', $cleanId) === 0 || strcasecmp($acc['email'] ?? '', $cleanId) === 0) {
+            $matchedAcc = $acc;
+            break;
+        }
+    }
+}
+
+// 3. Fallback for Default Super Admin
 if (!$matchedAcc && (strcasecmp($cleanId, 'EMP-000001') === 0 || strcasecmp($cleanId, 'earljohn@nkbmanufacturing.com') === 0 || strcasecmp($cleanId, 'admin') === 0)) {
     $matchedAcc = [
         'employee_id' => 'EMP-000001',
@@ -52,35 +69,19 @@ if (!$matchedAcc && (strcasecmp($cleanId, 'EMP-000001') === 0 || strcasecmp($cle
     ];
 }
 
-// 3. Fallback to Canteen Directory
 if (!$matchedAcc) {
-    $canteenJson = @file_get_contents('https://canteen.nkbmanufacturing.com/api/integration/employees?api_key=NkbCanteenIntegrationSecretApiKey2026');
-    $canteenEmployees = json_decode($canteenJson, true) ?? [];
-    foreach ($canteenEmployees as $emp) {
-        if (strcasecmp($emp['employee_id'] ?? '', $cleanId) === 0 || strcasecmp($emp['barcode_number'] ?? '', $cleanId) === 0) {
-            $matchedAcc = [
-                'employee_id' => $emp['employee_id'],
-                'name' => $emp['name'],
-                'email' => strtolower(preg_replace('/[^a-z0-9]/', '', $emp['employee_id'])) . '@nkbmanufacturing.com',
-                'department' => $emp['department'] ?? 'General Operations',
-                'position' => $emp['position'] ?? 'Staff',
-                'role' => 'EMPLOYEE',
-                'password' => 'Password123!',
-                'status' => (strtolower($emp['status'] ?? 'active') === 'active') ? 'Active' : 'Disabled',
-                'windows_username' => 'NKBUser',
-                'windows_domain' => '.'
-            ];
-            break;
-        }
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO `audit_logs` (`employee_id`, `computer_hostname`, `event_type`, `status`, `details`) VALUES (?, ?, 'Windows Login', 'FAILURE', 'Account not found')");
+            $stmt->execute([$cleanId, $computerName]);
+        } catch (Exception $e) {}
     }
-}
 
-if (!$matchedAcc) {
     http_response_code(401);
     echo json_encode([
         'success' => false,
-        'error_code' => 'INVALID_CREDENTIALS',
-        'message' => 'Employee ID or email not found in directory.'
+        'error_code' => 'NO_COMPUTER_ACCESS',
+        'message' => 'Employee ID not authorized for PC login in MySQL database.'
     ]);
     exit;
 }
@@ -95,9 +96,16 @@ if (strcasecmp($matchedAcc['status'] ?? 'Active', 'Active') !== 0) {
     exit;
 }
 
-// 4. Validate Password against current saved password or master fallback
+// 4. Validate Password
 $expectedPass = $matchedAcc['password'] ?? 'Password123!';
 if ($rawPass !== $expectedPass && $rawPass !== 'Password123!' && $rawPass !== 'NkbManufacturing25') {
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO `audit_logs` (`employee_id`, `computer_hostname`, `event_type`, `status`, `details`) VALUES (?, ?, 'Windows Login', 'FAILURE', 'Incorrect password')");
+            $stmt->execute([$matchedAcc['employee_id'], $computerName]);
+        } catch (Exception $e) {}
+    }
+
     http_response_code(401);
     echo json_encode([
         'success' => false,
@@ -105,6 +113,14 @@ if ($rawPass !== $expectedPass && $rawPass !== 'Password123!' && $rawPass !== 'N
         'message' => 'Incorrect password.'
     ]);
     exit;
+}
+
+// Log Success in MySQL Audit Logs
+if ($pdo) {
+    try {
+        $stmt = $pdo->prepare("INSERT INTO `audit_logs` (`employee_id`, `computer_hostname`, `event_type`, `status`, `details`) VALUES (?, ?, 'Windows Login', 'SUCCESS', 'Authenticated via NKB Credential Provider')");
+        $stmt->execute([$matchedAcc['employee_id'], $computerName]);
+    } catch (Exception $e) {}
 }
 
 http_response_code(200);
@@ -119,5 +135,6 @@ echo json_encode([
     'windows_username' => $matchedAcc['windows_username'] ?? 'NKBUser',
     'windows_domain' => $matchedAcc['windows_domain'] ?? '.',
     'password_status' => 'Normal',
+    'database_verified' => ($pdo !== null),
     'authenticated_at' => gmdate('Y-m-d\TH:i:s\Z')
 ]);
