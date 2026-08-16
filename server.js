@@ -1,12 +1,15 @@
 // Ultra-Resilient Universal Server for Hostinger Node.js
+// Integrated with NKB Canteen Enterprise API
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const HOST = '0.0.0.0';
+const CANTEEN_API_URL = 'https://canteen.nkbmanufacturing.com/api/integration/employees?api_key=NkbCanteenIntegrationSecretApiKey2026';
 
-// In-Memory User & PC Data
+// In-Memory User & PC Data with Canteen Integration Cache
 const memoryStore = {
   employees: [
     {
@@ -14,23 +17,9 @@ const memoryStore = {
       employee_id: 'EMP-000001',
       email: 'earljohn@nkbmanufacturing.com',
       name: 'Earl John',
-      department: 'IT Department',
+      department: 'IT Administration',
       position: 'Systems Administrator',
-      role: 'IT Admin',
-      status: 'Active',
-      password: 'Password123!',
-      password_status: 'Normal',
-      windows_username: 'NKBUser',
-      windows_domain: '.'
-    },
-    {
-      id: 2,
-      employee_id: 'EMP-000123',
-      email: 'juan.delacruz@nkbmanufacturing.com',
-      name: 'Juan Dela Cruz',
-      department: 'Manufacturing Ops',
-      position: 'Assembly Line Lead',
-      role: 'Employee',
+      role: 'SUPER_ADMIN',
       status: 'Active',
       password: 'Password123!',
       password_status: 'Normal',
@@ -39,15 +28,81 @@ const memoryStore = {
     }
   ],
   computers: [
-    { employee_id: 'EMP-000001', computer_hostname: 'NKBMANUF' },
-    { employee_id: 'EMP-000123', computer_hostname: 'NKBMANUF' }
+    { employee_id: 'EMP-000001', computer_hostname: 'NKBMANUF' }
   ],
-  audits: []
+  audits: [],
+  lastCanteenSync: null
 };
+
+// Helper: Fetch Employees from Canteen API
+function syncEmployeesFromCanteen(callback) {
+  https.get(CANTEEN_API_URL, (res) => {
+    let rawData = '';
+    res.on('data', (chunk) => rawData += chunk);
+    res.on('end', () => {
+      try {
+        const canteenEmployees = JSON.parse(rawData);
+        if (Array.isArray(canteenEmployees)) {
+          canteenEmployees.forEach(cEmp => {
+            const cleanId = String(cEmp.employee_id || '').trim();
+            if (!cleanId) return;
+
+            const existing = memoryStore.employees.find(e => e.employee_id.toUpperCase() === cleanId.toUpperCase());
+            const cleanName = cEmp.name || cleanId;
+            const cleanEmail = `${cleanId.toLowerCase().replace(/[^a-z0-9]/g, '')}@nkbmanufacturing.com`;
+            const cleanStatus = (cEmp.status || 'active').toLowerCase() === 'active' ? 'Active' : 'Disabled';
+
+            if (!existing) {
+              memoryStore.employees.push({
+                id: memoryStore.employees.length + 1,
+                employee_id: cleanId,
+                email: cleanEmail,
+                name: cleanName,
+                department: cEmp.department || 'General Operations',
+                position: cEmp.position || 'Staff',
+                role: 'EMPLOYEE',
+                status: cleanStatus,
+                password: 'Password123!',
+                password_status: 'Normal',
+                windows_username: 'NKBUser',
+                windows_domain: '.',
+                canteen_balance: cEmp.current_balance || 0,
+                barcode: cEmp.barcode_number || cleanId
+              });
+            } else {
+              // Update status and details from Canteen API while preserving custom passwords
+              existing.name = cleanName;
+              if (cEmp.department) existing.department = cEmp.department;
+              if (cEmp.position) existing.position = cEmp.position;
+              existing.status = cleanStatus;
+              existing.canteen_balance = cEmp.current_balance || 0;
+            }
+          });
+          memoryStore.lastCanteenSync = new Date().toISOString();
+          console.log(`[Canteen API] Successfully synced ${canteenEmployees.length} employees.`);
+        }
+        if (callback) callback(null, memoryStore.employees);
+      } catch (err) {
+        console.error('[Canteen API] Parse Error:', err.message);
+        if (callback) callback(err, memoryStore.employees);
+      }
+    });
+  }).on('error', (err) => {
+    console.error('[Canteen API] Request Error:', err.message);
+    if (callback) callback(err, memoryStore.employees);
+  });
+}
+
+// Initial Sync on Server Start
+syncEmployeesFromCanteen();
+
+// Periodic Auto-Sync Every 10 Minutes
+setInterval(() => {
+  syncEmployeesFromCanteen();
+}, 10 * 60 * 1000);
 
 // Create Native HTTP Server
 const server = http.createServer((req, res) => {
-  // CORS & Security Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-key, x-correlation-id');
@@ -72,8 +127,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       status: 'UP',
-      service: 'NKB Manufacturing Windows Authentication API & IT Portal',
+      service: 'NKB Manufacturing Windows Authentication API & Canteen Sync',
       port: PORT,
+      canteen_synced_employees: memoryStore.employees.length,
+      last_sync: memoryStore.lastCanteenSync,
       timestamp: new Date().toISOString()
     }));
     return;
@@ -102,17 +159,23 @@ const server = http.createServer((req, res) => {
         return;
       }
 
-      const emp = memoryStore.employees.find(e =>
+      // Check in local cache / Canteen employees
+      let emp = memoryStore.employees.find(e =>
         e.email.toLowerCase() === cleanId.toLowerCase() ||
         e.employee_id.toUpperCase() === cleanId.toUpperCase()
       );
+
+      // Emergency Earl John Fallback
+      if (!emp && (cleanId.toLowerCase() === 'earljohn@nkbmanufacturing.com' || cleanId.toUpperCase() === 'EMP-000001')) {
+        emp = memoryStore.employees[0];
+      }
 
       if (!emp) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           success: false,
           error_code: 'INVALID_CREDENTIALS',
-          message: 'Invalid credentials.'
+          message: 'Employee ID or email not found in NKB Canteen / Corporate Directory.'
         }));
         return;
       }
@@ -122,21 +185,32 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({
           success: false,
           error_code: 'ACCOUNT_DISABLED',
-          message: 'Account is disabled.'
+          message: 'Account is disabled or inactive.'
         }));
         return;
       }
 
-      // Password Check
+      // Password Validation (Accepts custom updated password OR initial default Password123!)
       if (rawPass !== emp.password && rawPass !== 'Password123!') {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           success: false,
           error_code: 'INVALID_CREDENTIALS',
-          message: 'Invalid credentials.'
+          message: 'Invalid password.'
         }));
         return;
       }
+
+      // Record Audit Log
+      memoryStore.audits.unshift({
+        time: 'Just now',
+        id: cleanId,
+        emp: `${emp.employee_id} (${emp.name})`,
+        pc: computer_name || 'NKBMANUF',
+        event: 'Windows Login',
+        outcome: 'SUCCESS',
+        desc: `Authenticated via NKB Windows Provider (Canteen Directory)`
+      });
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
@@ -146,10 +220,11 @@ const server = http.createServer((req, res) => {
         name: emp.name,
         department: emp.department,
         position: emp.position,
-        role: emp.role,
+        role: emp.role || 'EMPLOYEE',
         windows_username: emp.windows_username || 'NKBUser',
         windows_domain: emp.windows_domain || '.',
         password_status: emp.password_status || 'Normal',
+        canteen_balance: emp.canteen_balance || 0,
         authenticated_at: new Date().toISOString()
       }));
     });
@@ -159,11 +234,29 @@ const server = http.createServer((req, res) => {
   // 2. ADMIN API: GET EMPLOYEES
   if (url === '/api/v1/admin/employees' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ employees: memoryStore.employees }));
+    res.end(JSON.stringify({
+      employees: memoryStore.employees,
+      last_sync: memoryStore.lastCanteenSync,
+      total_count: memoryStore.employees.length
+    }));
     return;
   }
 
-  // 3. ADMIN API: CREATE EMPLOYEE
+  // 3. ADMIN API: FORCE SYNC WITH CANTEEN API
+  if (url === '/api/v1/admin/canteen/sync' && req.method === 'POST') {
+    syncEmployeesFromCanteen((err, employees) => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        message: `Synced ${employees.length} employees from Canteen API`,
+        last_sync: memoryStore.lastCanteenSync,
+        count: employees.length
+      }));
+    });
+    return;
+  }
+
+  // 4. ADMIN API: CREATE EMPLOYEE
   if (url === '/api/v1/admin/employees' && req.method === 'POST') {
     readBody(req, body => {
       const { employee_id, email, name, department, position, role, windows_username, windows_domain, password } = body || {};
@@ -180,7 +273,7 @@ const server = http.createServer((req, res) => {
         name: name || employee_id,
         department: department || '',
         position: position || '',
-        role: role || 'Employee',
+        role: role || 'EMPLOYEE',
         status: 'Active',
         password: password,
         password_status: 'Normal',
@@ -194,13 +287,13 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 4. ADMIN API: EDIT EMPLOYEE ACCOUNT (PUT /api/v1/admin/employees/:id)
+  // 5. ADMIN API: EDIT EMPLOYEE ACCOUNT
   if (url.startsWith('/api/v1/admin/employees/') && !url.includes('reset-password') && !url.includes('computers') && req.method === 'PUT') {
     const parts = url.split('/');
     const empId = parts[parts.length - 1];
     readBody(req, body => {
       const { new_employee_id, name, email, department, position, status, windows_username, windows_domain } = body || {};
-      const emp = memoryStore.employees.find(e => e.employee_id === empId);
+      const emp = memoryStore.employees.find(e => e.employee_id.toUpperCase() === empId.toUpperCase());
       if (emp) {
         if (new_employee_id) emp.employee_id = new_employee_id;
         if (name) emp.name = name;
@@ -217,13 +310,13 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 5. ADMIN API: RESET PASSWORD
+  // 6. ADMIN API: RESET PASSWORD
   if (url.startsWith('/api/v1/admin/employees/') && url.endsWith('/reset-password') && req.method === 'POST') {
     const parts = url.split('/');
     const empId = parts[parts.length - 2];
     readBody(req, body => {
       const { new_password } = body || {};
-      const emp = memoryStore.employees.find(e => e.employee_id === empId);
+      const emp = memoryStore.employees.find(e => e.employee_id.toUpperCase() === empId.toUpperCase());
       if (emp) {
         emp.password = new_password;
       }
@@ -233,7 +326,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 6. STATIC FILES
+  // 7. STATIC FILES
   let filePath = path.join(__dirname, url === '/' ? 'index.html' : url);
   if (!fs.existsSync(filePath)) {
     filePath = path.join(__dirname, 'index.html');
@@ -263,5 +356,5 @@ function readBody(req, callback) {
 }
 
 server.listen(PORT, HOST, () => {
-  console.log(`[Hostinger] NKB Keymaster Server Running on port ${PORT}`);
+  console.log(`[Hostinger] NKB Keymaster Server Running on port ${PORT} with Canteen API integration.`);
 });

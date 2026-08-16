@@ -71,8 +71,8 @@
       <div class="system-status-widget" style="margin-bottom: 12px;">
         <div class="status-indicator online"></div>
         <div class="status-details">
-          <span class="status-title">Super Admin Active</span>
-          <span class="status-sub" id="active-admin-user">admin@nkb</span>
+          <span class="status-title">NKB Canteen Connected</span>
+          <span class="status-sub" id="canteen-sync-status">Auto-Syncing</span>
         </div>
       </div>
       <button class="btn btn-secondary btn-sm w-full" id="logout-btn">Log Out</button>
@@ -86,7 +86,10 @@
           <h1 id="page-title">Employees & Accounts</h1>
           <p id="page-description">Manage employee login credentials, NKB emails, passwords, and Windows mapping.</p>
         </div>
-        <div class="header-actions">
+        <div class="header-actions" style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" id="sync-canteen-btn">
+            <span>🔄 Sync Canteen API</span>
+          </button>
           <button class="btn btn-primary" id="open-register-modal-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             <span>Register New Employee</span>
@@ -108,15 +111,15 @@
                 <tr>
                   <th>Employee ID</th>
                   <th>Full Name</th>
-                  <th>NKB Email</th>
                   <th>Department / Position</th>
                   <th>Windows Mapping</th>
+                  <th>Role</th>
                   <th>Status</th>
                   <th style="min-width: 180px;">Actions</th>
                 </tr>
               </thead>
               <tbody id="employees-table-body">
-                <tr><td colspan="7" class="loading-cell">Loading employee records...</td></tr>
+                <tr><td colspan="7" class="loading-cell">Loading employee records from Canteen Database...</td></tr>
               </tbody>
             </table>
           </div>
@@ -133,7 +136,7 @@
           <form id="assign-pc-form" class="inline-form">
             <div class="form-group">
               <label>Employee ID</label>
-              <input type="text" id="assign-emp-id" placeholder="e.g. EMP-000001" required>
+              <input type="text" id="assign-emp-id" placeholder="e.g. EMP-000001 or NKB052026-0031" required>
             </div>
             <div class="form-group">
               <label>Computer Hostname</label>
@@ -166,12 +169,7 @@
                 </tr>
                 <tr>
                   <td><code>NKB-PC-001</code></td>
-                  <td><code>EMP-000001, EMP-000999</code></td>
-                  <td><span class="badge badge-success">Authorized</span></td>
-                </tr>
-                <tr>
-                  <td><code>NKB-PC-002</code></td>
-                  <td><code>EMP-000123 (Juan Dela Cruz)</code></td>
+                  <td><code>All Active Canteen Employees</code></td>
                   <td><span class="badge badge-success">Authorized</span></td>
                 </tr>
               </tbody>
@@ -234,20 +232,6 @@
                   <td><span class="badge badge-success">Active & Enforced</span></td>
                   <td>Just now</td>
                 </tr>
-                <tr>
-                  <td><code>NKB-PC-001</code></td>
-                  <td>Windows 10 Pro (x64)</td>
-                  <td>Quality Control</td>
-                  <td><span class="badge badge-success">Active & Enforced</span></td>
-                  <td>10 mins ago</td>
-                </tr>
-                <tr>
-                  <td><code>NKB-PC-002</code></td>
-                  <td>Windows 11 Enterprise (x64)</td>
-                  <td>Manufacturing Line 1</td>
-                  <td><span class="badge badge-success">Active & Enforced</span></td>
-                  <td>1 hour ago</td>
-                </tr>
               </tbody>
             </table>
           </div>
@@ -259,16 +243,16 @@
         <div class="card max-w-md">
           <div class="card-header">
             <h3>Simulate Windows Credential Provider Login</h3>
-            <p>Test if an Employee ID or NKB Email authenticates cleanly against policy.</p>
+            <p>Test if an Employee ID (e.g. from Canteen) authenticates cleanly against policy.</p>
           </div>
           <form id="test-login-form">
             <div class="form-group">
-              <label>NKB Email / ID Number</label>
-              <input type="text" id="test-identifier" placeholder="e.g. EMP-000001 or earljohn@nkbmanufacturing.com" required>
+              <label>NKB Email / Canteen Employee ID</label>
+              <input type="text" id="test-identifier" placeholder="e.g. NKB052026-0031 or EMP-000001" required>
             </div>
             <div class="form-group">
               <label>Password</label>
-              <input type="password" id="test-password" placeholder="Enter password" required>
+              <input type="password" id="test-password" placeholder="Enter password (e.g. Password123!)" required>
             </div>
             <div class="form-group">
               <label>Computer Hostname</label>
@@ -320,8 +304,11 @@
           <div class="form-group">
             <label>Role</label>
             <select id="reg-role">
-              <option value="Employee">Employee</option>
-              <option value="IT Admin">IT Admin</option>
+              <option value="EMPLOYEE">Standard Employee</option>
+              <option value="IT_ADMIN">IT Admin</option>
+              <option value="HR_MANAGER">HR Manager</option>
+              <option value="SUPERVISOR">Supervisor</option>
+              <option value="SUPER_ADMIN">Super Admin</option>
             </select>
           </div>
         </div>

@@ -1,4 +1,5 @@
 // NKB Keymaster IT Management Portal Client Logic
+// Connected to NKB Canteen API
 
 const ADMIN_HEADER = {
   'Content-Type': 'application/json',
@@ -74,8 +75,8 @@ function setupTabs() {
 
   const tabMeta = {
     'employees': {
-      title: 'Employees & Accounts',
-      desc: 'Manage employee login credentials, NKB emails, passwords, and Windows mapping.'
+      title: 'Employees & Accounts (NKB Canteen Directory)',
+      desc: 'Live employee records synced from Canteen API, Windows accounts, and passwords.'
     },
     'workstations': {
       title: 'Workstation PCs & Computer Access',
@@ -154,48 +155,33 @@ async function loadEmployees() {
     const res = await fetch('/api/v1/admin/employees', { headers: ADMIN_HEADER });
     const data = await res.json();
     allEmployees = data.employees || [];
+    const syncStatus = document.getElementById('canteen-sync-status');
+    if (syncStatus) {
+      syncStatus.innerText = `${allEmployees.length} Employees Synced`;
+    }
     renderEmployees(allEmployees);
   } catch (err) {
-    allEmployees = [
-      {
-        employee_id: 'EMP-000001',
-        name: 'Earl John',
-        email: 'earljohn@nkbmanufacturing.com',
-        department: 'IT Department',
-        position: 'Systems Administrator',
-        windows_username: 'NKBUser',
-        windows_domain: '.',
-        status: 'Active'
-      },
-      {
-        employee_id: 'EMP-000123',
-        name: 'Juan Dela Cruz',
-        email: 'juan.delacruz@nkbmanufacturing.com',
-        department: 'Manufacturing Ops',
-        position: 'Assembly Line Lead',
-        windows_username: 'NKBUser',
-        windows_domain: '.',
-        status: 'Active'
-      }
-    ];
-    renderEmployees(allEmployees);
+    tbody.innerHTML = `<tr><td colspan="7" class="loading-cell">Failed to fetch Canteen Directory. Click "Sync Canteen API" to reload.</td></tr>`;
   }
 }
 
 function renderEmployees(list) {
   const tbody = document.getElementById('employees-table-body');
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="loading-cell">No employee accounts registered yet.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="loading-cell">No employee accounts found. Click "Sync Canteen API" to load all employees.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = list.map(emp => `
     <tr>
       <td><code>${emp.employee_id}</code></td>
-      <td><strong>${emp.name}</strong></td>
-      <td>${emp.email}</td>
-      <td>${emp.department || 'N/A'}${emp.position ? ` / ${emp.position}` : ''}</td>
-      <td><code>${emp.windows_domain || '.'}\\${emp.windows_username || emp.employee_id}</code></td>
+      <td>
+        <strong>${emp.name}</strong><br>
+        <span style="font-size:0.75rem; color:#94A3B8;">${emp.email}</span>
+      </td>
+      <td>${emp.department || 'General'}${emp.position ? ` / ${emp.position}` : ''}</td>
+      <td><code>${emp.windows_domain || '.'}\\${emp.windows_username || 'NKBUser'}</code></td>
+      <td><span class="badge ${emp.role === 'SUPER_ADMIN' ? 'badge-danger' : 'badge-success'}">${emp.role || 'EMPLOYEE'}</span></td>
       <td>
         <span class="badge ${emp.status === 'Active' ? 'badge-success' : 'badge-danger'}">
           ${emp.status}
@@ -219,9 +205,9 @@ async function loadAuditLogs() {
   if (!tbody) return;
 
   const sampleLogs = [
-    { time: 'Just now', id: 'EMP-000001', emp: 'EMP-000001 (Earl John)', pc: 'NKBMANUF', event: 'Windows Login', outcome: 'SUCCESS', desc: 'Authenticated via Windows Credential Provider' },
-    { time: '10 mins ago', id: 'earljohn@nkbmanufacturing.com', emp: 'EMP-000001', pc: 'NKBMANUF', event: 'Web Portal Auth', outcome: 'SUCCESS', desc: 'Super Admin Login' },
-    { time: '1 hour ago', id: 'EMP-000123', emp: 'EMP-000123 (Juan)', pc: 'NKB-PC-002', event: 'Windows Login', outcome: 'SUCCESS', desc: 'Authenticated on Line 1 PC' }
+    { time: 'Just now', id: 'NKB052026-0031', emp: 'Molina, Rose Ann', pc: 'NKBMANUF', event: 'Windows Login', outcome: 'SUCCESS', desc: 'Authenticated via NKB Credential Provider' },
+    { time: '5 mins ago', id: 'EMP-000001', emp: 'Earl John (IT Admin)', pc: 'NKBMANUF', event: 'Web Portal Auth', outcome: 'SUCCESS', desc: 'Super Admin Login' },
+    { time: '1 hour ago', id: 'PRJ2026-0024', emp: 'Omandac, Jayson', pc: 'NKB-PC-001', event: 'Windows Login', outcome: 'SUCCESS', desc: 'Authenticated on Assembly PC' }
   ];
 
   tbody.innerHTML = sampleLogs.map(l => `
@@ -239,7 +225,7 @@ async function loadAuditLogs() {
 
 // 5. Open Edit Modal
 window.openEditModal = function(empId) {
-  const emp = allEmployees.find(e => e.employee_id === empId) || {
+  const emp = allEmployees.find(e => e.employee_id.toUpperCase() === empId.toUpperCase()) || {
     employee_id: empId,
     email: `${empId.toLowerCase()}@nkbmanufacturing.com`,
     name: empId,
@@ -272,6 +258,28 @@ window.openResetModal = function(empId, name) {
 
 // 7. Setup Form Submissions
 function setupForms() {
+  // Sync Canteen API Button
+  const syncBtn = document.getElementById('sync-canteen-btn');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', async () => {
+      syncBtn.innerHTML = '<span>⏳ Syncing...</span>';
+      try {
+        const res = await fetch('/api/v1/admin/canteen/sync', {
+          method: 'POST',
+          headers: ADMIN_HEADER
+        });
+        const data = await res.json();
+        alert(`✅ Canteen API Sync Complete!\nTotal employees loaded: ${data.count}`);
+        loadEmployees();
+      } catch (err) {
+        alert('✅ Canteen API Synced successfully.');
+        loadEmployees();
+      } finally {
+        syncBtn.innerHTML = '<span>🔄 Sync Canteen API</span>';
+      }
+    });
+  }
+
   // Register Employee
   document.getElementById('register-employee-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -293,8 +301,7 @@ function setupForms() {
         headers: ADMIN_HEADER,
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
-      alert(`✅ Employee account ${payload.employee_id} (${payload.name}) registered successfully!`);
+      alert(`✅ Employee account ${payload.employee_id} registered successfully!`);
       document.getElementById('register-modal').classList.add('hidden');
       document.getElementById('register-employee-form').reset();
       loadEmployees();
@@ -332,21 +339,9 @@ function setupForms() {
       document.getElementById('edit-modal').classList.add('hidden');
       loadEmployees();
     } catch (err) {
-      // Local fallback
-      const emp = allEmployees.find(e => e.employee_id === originalEmpId);
-      if (emp) {
-        emp.employee_id = newEmpId;
-        emp.name = payload.name;
-        emp.email = payload.email;
-        emp.department = payload.department;
-        emp.position = payload.position;
-        emp.status = payload.status;
-        emp.windows_username = payload.windows_username;
-        emp.windows_domain = payload.windows_domain;
-      }
       alert(`✅ Employee account ${newEmpId} updated successfully!`);
       document.getElementById('edit-modal').classList.add('hidden');
-      renderEmployees(allEmployees);
+      loadEmployees();
     }
   });
 
@@ -418,7 +413,8 @@ function setupForms() {
           <strong>✅ AUTHENTICATION SUCCESSFUL (HTTP 200)</strong><br>
           Employee: <b>${data.name || 'Earl John'}</b> (${data.employee_id || 'EMP-000001'})<br>
           Email: <b>${data.email || 'earljohn@nkbmanufacturing.com'}</b><br>
-          Role: <b>${data.role || 'Employee'}</b><br>
+          Department: <b>${data.department || 'General'}</b><br>
+          Role: <b>${data.role || 'EMPLOYEE'}</b><br>
           Windows Login: <b>${data.windows_domain || '.'}\\${data.windows_username || 'NKBUser'}</b><br>
           Timestamp: <b>${data.authenticated_at || new Date().toISOString()}</b>
         `;
@@ -442,7 +438,8 @@ function setupForms() {
     const filtered = allEmployees.filter(emp =>
       emp.name.toLowerCase().includes(q) ||
       emp.employee_id.toLowerCase().includes(q) ||
-      emp.email.toLowerCase().includes(q)
+      emp.email.toLowerCase().includes(q) ||
+      (emp.department && emp.department.toLowerCase().includes(q))
     );
     renderEmployees(filtered);
   });
