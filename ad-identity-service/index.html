@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260816_4">
+  <link rel="stylesheet" href="style.css?v=20260816_5">
 </head>
 <body>
   <!-- SUPER ADMIN LOGIN OVERLAY -->
@@ -87,7 +87,7 @@
       <header class="top-header">
         <div class="header-titles">
           <h1 id="page-title">Authorized Workstation Computer Accounts</h1>
-          <p id="page-description">Manage employees authorized with Windows login access, roles, and PC credentials.</p>
+          <p id="page-description">Manage employees authorized with Windows login access, passwords, roles, and PC credentials.</p>
         </div>
         <div class="header-actions" style="display: flex; gap: 10px;">
           <button class="btn btn-primary" id="open-register-modal-btn">
@@ -334,11 +334,11 @@
     </div>
   </div>
 
-  <!-- MODAL 2: EDIT EMPLOYEE ACCOUNT (WITH EDITABLE ROLE) -->
+  <!-- MODAL 2: EDIT EMPLOYEE ACCOUNT (WITH EDITABLE PASSWORD & ROLE) -->
   <div class="modal-overlay hidden" id="edit-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Edit Employee Account, Role & Windows Mapping</h3>
+        <h3>Edit Employee Account, Password, Role & Windows Mapping</h3>
         <button class="modal-close-btn" id="close-edit-modal-btn">&times;</button>
       </div>
       <form id="edit-employee-form">
@@ -385,6 +385,10 @@
 
         <div class="form-row">
           <div class="form-group">
+            <label>Password * (Editable)</label>
+            <input type="text" id="edit-password" placeholder="Enter password (e.g. Password123!)" required>
+          </div>
+          <div class="form-group">
             <label>Account Status</label>
             <select id="edit-status">
               <option value="Active">Active</option>
@@ -392,13 +396,13 @@
               <option value="Locked">Locked</option>
             </select>
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label>Windows Login Username *</label>
             <input type="text" id="edit-win-user" placeholder="NKBUser or earlj" required>
           </div>
-        </div>
-
-        <div class="form-row">
           <div class="form-group">
             <label>Windows Domain</label>
             <input type="text" id="edit-win-domain" placeholder=". or NKB" required>
@@ -437,6 +441,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260816_v4"></script>
+  <script src="app.js?v=20260816_v5"></script>
 </body>
 </html>

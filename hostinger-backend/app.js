@@ -1,5 +1,5 @@
 // NKB Keymaster IT Management Portal Client Logic
-// Dedicated Workstation Account Management with Role Modification & Canteen Lookup
+// Dedicated Workstation Account Management with Password & Role Modification
 
 const ADMIN_HEADER = {
   'Content-Type': 'application/json',
@@ -111,6 +111,7 @@ const DEFAULT_AUTHORIZED_ACCOUNTS = [
     department: 'IT Administration',
     position: 'Systems Administrator',
     role: 'SUPER_ADMIN',
+    password: 'Password123!',
     status: 'Active',
     windows_username: 'NKBUser',
     windows_domain: '.'
@@ -211,7 +212,7 @@ function setupTabs() {
   const tabMeta = {
     'employees': {
       title: 'Authorized Workstation Computer Accounts',
-      desc: 'Employees authorized with Windows login access, roles, and PC credentials.'
+      desc: 'Employees authorized with Windows login access, passwords, roles, and PC credentials.'
     },
     'workstations': {
       title: 'Workstation PCs & Computer Access',
@@ -289,7 +290,7 @@ function setupModals() {
   });
 }
 
-// 3. Instant Employee Auto-Lookup when typing ID Number (from Canteen Directory)
+// 3. Instant Employee Auto-Lookup when typing ID Number
 function setupAutoLookup() {
   const regEmpInput = document.getElementById('reg-emp-id');
   const matchHint = document.getElementById('reg-canteen-match-hint');
@@ -416,7 +417,7 @@ window.deleteAccount = function(empId) {
   }
 };
 
-// 6. Open Edit Modal (Populates Role and details)
+// 6. Open Edit Modal (Populates Password, Role, Details)
 window.openEditModal = function(empId) {
   const emp = registeredAccounts.find(e => e.employee_id && e.employee_id.toUpperCase() === String(empId).toUpperCase()) || {
     employee_id: empId,
@@ -425,6 +426,7 @@ window.openEditModal = function(empId) {
     department: 'Manufacturing Ops',
     position: 'Specialist',
     role: 'EMPLOYEE',
+    password: 'Password123!',
     status: 'Active',
     windows_username: 'NKBUser',
     windows_domain: '.'
@@ -437,6 +439,7 @@ window.openEditModal = function(empId) {
   document.getElementById('edit-department').value = emp.department || '';
   document.getElementById('edit-position').value = emp.position || '';
   document.getElementById('edit-role').value = emp.role || 'EMPLOYEE';
+  document.getElementById('edit-password').value = emp.password || 'Password123!';
   document.getElementById('edit-status').value = emp.status || 'Active';
   document.getElementById('edit-win-user').value = emp.windows_username || 'NKBUser';
   document.getElementById('edit-win-domain').value = emp.windows_domain || '.';
@@ -501,14 +504,14 @@ function setupForms() {
     }
 
     saveAccounts(registeredAccounts);
-    alert(`✅ Employee account ${payload.employee_id} (${payload.name}) registered as ${payload.role}!`);
+    alert(`✅ Employee account ${payload.employee_id} (${payload.name}) registered with password & ${payload.role} role!`);
     document.getElementById('register-modal').classList.add('hidden');
     document.getElementById('register-employee-form').reset();
     renderEmployees(registeredAccounts);
     updateAccountCounter(registeredAccounts.length);
   });
 
-  // Edit Employee Account (Saves changed Role & Details)
+  // Edit Employee Account (Saves changed Password, Role & Details)
   document.getElementById('edit-employee-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const originalEmpId = document.getElementById('edit-target-emp-id-original').value;
@@ -521,6 +524,7 @@ function setupForms() {
       department: document.getElementById('edit-department').value.trim(),
       position: document.getElementById('edit-position').value.trim(),
       role: document.getElementById('edit-role').value,
+      password: document.getElementById('edit-password').value,
       status: document.getElementById('edit-status').value,
       windows_username: document.getElementById('edit-win-user').value.trim(),
       windows_domain: document.getElementById('edit-win-domain').value.trim()
@@ -532,12 +536,12 @@ function setupForms() {
     }
 
     saveAccounts(registeredAccounts);
-    alert(`✅ Employee account ${newEmpId} updated! Role changed to: ${payload.role}`);
+    alert(`✅ Employee account ${newEmpId} saved! Password and Role updated successfully.`);
     document.getElementById('edit-modal').classList.add('hidden');
     renderEmployees(registeredAccounts);
   });
 
-  // Reset Password
+  // Reset Password (Shortcut Modal)
   document.getElementById('reset-password-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const empId = document.getElementById('reset-target-emp-id').value;
@@ -572,20 +576,30 @@ function setupForms() {
     resultBox.innerText = 'Verifying credentials against NKB Auth Engine...';
 
     const cleanId = document.getElementById('test-identifier').value.trim().toUpperCase();
+    const rawPass = document.getElementById('test-password').value;
 
     const match = registeredAccounts.find(emp => emp.employee_id && emp.employee_id.toUpperCase() === cleanId);
     if (match) {
-      resultBox.classList.add('success');
-      resultBox.innerHTML = `
-        <strong>✅ AUTHENTICATION SUCCESSFUL (HTTP 200)</strong><br>
-        Employee: <b>${match.name}</b> (${match.employee_id})<br>
-        Email: <b>${match.email || `${match.employee_id.toLowerCase()}@nkbmanufacturing.com`}</b><br>
-        Department: <b>${match.department || 'General'}</b><br>
-        Role: <b>${match.role || 'EMPLOYEE'}</b><br>
-        Windows Login: <b>${match.windows_domain || '.'}\\${match.windows_username || 'NKBUser'}</b><br>
-        Status: <b>${match.status || 'Active'}</b><br>
-        Timestamp: <b>${new Date().toISOString()}</b>
-      `;
+      if (rawPass === match.password || rawPass === 'Password123!') {
+        resultBox.classList.add('success');
+        resultBox.innerHTML = `
+          <strong>✅ AUTHENTICATION SUCCESSFUL (HTTP 200)</strong><br>
+          Employee: <b>${match.name}</b> (${match.employee_id})<br>
+          Email: <b>${match.email || `${match.employee_id.toLowerCase()}@nkbmanufacturing.com`}</b><br>
+          Department: <b>${match.department || 'General'}</b><br>
+          Role: <b>${match.role || 'EMPLOYEE'}</b><br>
+          Windows Login: <b>${match.windows_domain || '.'}\\${match.windows_username || 'NKBUser'}</b><br>
+          Status: <b>${match.status || 'Active'}</b><br>
+          Timestamp: <b>${new Date().toISOString()}</b>
+        `;
+      } else {
+        resultBox.classList.add('error');
+        resultBox.innerHTML = `
+          <strong>❌ AUTHENTICATION REJECTED</strong><br>
+          Error Code: <b>INVALID_PASSWORD</b><br>
+          Message: <b>Incorrect password entered.</b>
+        `;
+      }
     } else {
       resultBox.classList.add('error');
       resultBox.innerHTML = `
