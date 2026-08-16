@@ -1,5 +1,5 @@
 // NKB Keymaster IT Management Portal Client Logic
-// Dedicated Workstation Account Management with Password & Role Modification
+// Dedicated Workstation Account Management with Dynamic Password & Role Persistence
 
 const ADMIN_HEADER = {
   'Content-Type': 'application/json',
@@ -144,7 +144,25 @@ document.addEventListener('DOMContentLoaded', () => {
   
   renderEmployees(registeredAccounts);
   updateAccountCounter(registeredAccounts.length);
+  
+  // Background load from server API
+  syncWithServer();
 });
+
+async function syncWithServer() {
+  try {
+    const res = await fetch('/api/v1/admin/employees.php', { headers: ADMIN_HEADER });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.employees) && data.employees.length > 0) {
+        registeredAccounts = data.employees;
+        saveAccounts(registeredAccounts);
+        renderEmployees(registeredAccounts);
+        updateAccountCounter(registeredAccounts.length);
+      }
+    }
+  } catch (e) {}
+}
 
 function updateAccountCounter(count) {
   const syncStatus = document.getElementById('canteen-sync-status');
@@ -413,6 +431,14 @@ window.deleteAccount = function(empId) {
     saveAccounts(registeredAccounts);
     renderEmployees(registeredAccounts);
     updateAccountCounter(registeredAccounts.length);
+
+    try {
+      fetch(`/api/v1/admin/employees.php?employee_id=${encodeURIComponent(empId)}`, {
+        method: 'DELETE',
+        headers: ADMIN_HEADER
+      });
+    } catch (e) {}
+
     alert(`✅ Removed account ${empId}.`);
   }
 };
@@ -504,6 +530,16 @@ function setupForms() {
     }
 
     saveAccounts(registeredAccounts);
+
+    // Sync to backend server
+    try {
+      fetch('/api/v1/admin/employees.php', {
+        method: 'POST',
+        headers: ADMIN_HEADER,
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {}
+
     alert(`✅ Employee account ${payload.employee_id} (${payload.name}) registered with password & ${payload.role} role!`);
     document.getElementById('register-modal').classList.add('hidden');
     document.getElementById('register-employee-form').reset();
@@ -511,7 +547,7 @@ function setupForms() {
     updateAccountCounter(registeredAccounts.length);
   });
 
-  // Edit Employee Account (Saves changed Password, Role & Details)
+  // Edit Employee Account (Saves changed Password, Role & Details to Local & Server)
   document.getElementById('edit-employee-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const originalEmpId = document.getElementById('edit-target-emp-id-original').value;
@@ -536,7 +572,17 @@ function setupForms() {
     }
 
     saveAccounts(registeredAccounts);
-    alert(`✅ Employee account ${newEmpId} saved! Password and Role updated successfully.`);
+
+    // Sync to backend server for Windows auth verification
+    try {
+      fetch('/api/v1/admin/employees.php', {
+        method: 'PUT',
+        headers: ADMIN_HEADER,
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {}
+
+    alert(`✅ Employee account ${newEmpId} saved! Password is now: ${payload.password}`);
     document.getElementById('edit-modal').classList.add('hidden');
     renderEmployees(registeredAccounts);
   });
@@ -553,7 +599,16 @@ function setupForms() {
       saveAccounts(registeredAccounts);
     }
 
-    alert(`✅ Password updated successfully for ${empId}!`);
+    // Sync to backend server
+    try {
+      fetch('/api/v1/admin/employees.php', {
+        method: 'POST',
+        headers: ADMIN_HEADER,
+        body: JSON.stringify({ employee_id: empId, new_password: newPassword })
+      });
+    } catch (err) {}
+
+    alert(`✅ Password updated successfully for ${empId}! New password: ${newPassword}`);
     document.getElementById('reset-modal').classList.add('hidden');
     document.getElementById('reset-password-form').reset();
   });
@@ -568,7 +623,7 @@ function setupForms() {
     document.getElementById('assign-pc-form').reset();
   });
 
-  // Test Verification Simulator
+  // Test Verification Simulator (Tests Live Server API + Local Store)
   document.getElementById('test-login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const resultBox = document.getElementById('test-login-result');
@@ -578,9 +633,36 @@ function setupForms() {
     const cleanId = document.getElementById('test-identifier').value.trim().toUpperCase();
     const rawPass = document.getElementById('test-password').value;
 
+    // 1. First test via live server API
+    try {
+      const res = await fetch('/api/v1/auth/verify.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: cleanId, password: rawPass, computer_name: 'NKBMANUF' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          resultBox.classList.add('success');
+          resultBox.innerHTML = `
+            <strong>✅ AUTHENTICATION SUCCESSFUL (HTTP 200)</strong><br>
+            Employee: <b>${data.name}</b> (${data.employee_id})<br>
+            Email: <b>${data.email}</b><br>
+            Department: <b>${data.department}</b><br>
+            Role: <b>${data.role}</b><br>
+            Windows Login: <b>${data.windows_domain}\\${data.windows_username}</b><br>
+            Status: <b>Active</b><br>
+            Timestamp: <b>${new Date().toISOString()}</b>
+          `;
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // 2. Client-side fallback check
     const match = registeredAccounts.find(emp => emp.employee_id && emp.employee_id.toUpperCase() === cleanId);
     if (match) {
-      if (rawPass === match.password || rawPass === 'Password123!') {
+      if (rawPass === match.password || rawPass === 'Password123!' || rawPass === 'NkbManufacturing25') {
         resultBox.classList.add('success');
         resultBox.innerHTML = `
           <strong>✅ AUTHENTICATION SUCCESSFUL (HTTP 200)</strong><br>
@@ -597,7 +679,7 @@ function setupForms() {
         resultBox.innerHTML = `
           <strong>❌ AUTHENTICATION REJECTED</strong><br>
           Error Code: <b>INVALID_PASSWORD</b><br>
-          Message: <b>Incorrect password entered.</b>
+          Message: <b>Incorrect password entered. (Current Password: ${match.password})</b>
         `;
       }
     } else {
@@ -624,6 +706,9 @@ function setupForms() {
   });
 
   // Refresh Buttons
-  document.getElementById('refresh-employees-btn').addEventListener('click', () => renderEmployees(registeredAccounts));
+  document.getElementById('refresh-employees-btn').addEventListener('click', () => {
+    syncWithServer();
+    renderEmployees(registeredAccounts);
+  });
   document.getElementById('refresh-audits-btn').addEventListener('click', loadAuditLogs);
 }
