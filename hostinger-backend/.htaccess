@@ -1,20 +1,28 @@
-# Hostinger Clean URL Rewrite for NKB Authentication & Admin API
+# Hostinger Clean URL & Real-File Preservation Rewrite Rules
 RewriteEngine On
 RewriteBase /
 
-# 1. Health check
-RewriteRule ^health/?$ index.php [L,QSA]
+# 1. Allow direct access to real files and directories (PHP, CSS, JS, Images, JSON)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
 
-# 2. Auth verify endpoint
+# 2. Health check
+RewriteRule ^health/?$ health.php [L,QSA]
+
+# 3. DB Test endpoint
+RewriteRule ^api/db_test/?$ api/db_test.php [L,QSA]
+
+# 4. Auth verify endpoint
 RewriteRule ^api/v1/auth/verify/?$ api/v1/auth/verify.php [L,QSA]
 
-# 3. Admin employees endpoint
+# 5. Admin employees endpoint
 RewriteRule ^api/v1/admin/employees/?$ api/v1/admin/employees.php [L,QSA]
 
-# 4. Admin canteen sync endpoint
+# 6. Admin canteen sync endpoint
 RewriteRule ^api/v1/admin/canteen/sync/?$ api/v1/admin/canteen/sync.php [L,QSA]
 
-# 5. Admin canteen lookup endpoint
+# 7. Admin canteen lookup endpoint
 RewriteRule ^api/v1/admin/canteen/lookup/?$ api/v1/admin/canteen/lookup.php [L,QSA]
 
 # Prevent directory listings
