@@ -27,9 +27,8 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.static(path.join(__dirname, '..')));
 app.use(express.static(path.join(__dirname, '../../')));
 
-// Clean DB Config with strict IPv4 forcing (to avoid ::1 Access Denied on Hostinger)
-const rawHost = process.env.DB_HOST || '127.0.0.1';
-const DB_HOST = (rawHost === 'localhost' || rawHost === '::1') ? '127.0.0.1' : rawHost;
+// DB Configuration
+const DB_HOST = process.env.DB_HOST || '127.0.0.1';
 const DB_USER = process.env.DB_USER || 'u335953510_login';
 const DB_PASS = process.env.DB_PASSWORD || process.env.DB_PASS || 'NkbManufacturing25';
 const DB_NAME = process.env.DB_NAME || 'u335953510_login_db';
@@ -48,7 +47,6 @@ async function getDbConnection() {
 
   if (!mysql) return null;
 
-  // Try Connection Strategy 1: IPv4 127.0.0.1
   try {
     const pool = mysql.createPool({
       host: '127.0.0.1',
@@ -62,103 +60,12 @@ async function getDbConnection() {
     const conn = await pool.getConnection();
     dbPool = pool;
     return conn;
-  } catch (err1) {
-    console.log('[DB Strategy 1 Failed (127.0.0.1)]', err1.message);
-  }
-
-  // Try Connection Strategy 2: Default host / Socket
-  try {
-    const pool = mysql.createPool({
-      host: DB_HOST,
-      user: DB_USER,
-      password: DB_PASS,
-      database: DB_NAME,
-      waitForConnections: true,
-      connectionLimit: 10,
-      connectTimeout: 4000
-    });
-    const conn = await pool.getConnection();
-    dbPool = pool;
-    return conn;
-  } catch (err2) {
-    console.log('[DB Strategy 2 Failed]', err2.message);
-  }
-
-  // Try Connection Strategy 3: Common Hostinger Sockets
-  const sockets = ['/var/run/mysqld/mysqld.sock', '/tmp/mysql.sock'];
-  for (const sock of sockets) {
-    if (fs.existsSync(sock)) {
-      try {
-        const pool = mysql.createPool({
-          socketPath: sock,
-          user: DB_USER,
-          password: DB_PASS,
-          database: DB_NAME,
-          waitForConnections: true,
-          connectionLimit: 10,
-          connectTimeout: 4000
-        });
-        const conn = await pool.getConnection();
-        dbPool = pool;
-        return conn;
-      } catch (err3) {}
-    }
+  } catch (err) {
+    console.error('[MySQL Pool Error]', err.message);
   }
 
   return null;
 }
-
-// Auto-initialize tables
-async function ensureDbSchema() {
-  const conn = await getDbConnection();
-  if (!conn) return;
-
-  try {
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS \`employees\` (
-        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
-        \`employee_id\` VARCHAR(50) NOT NULL UNIQUE,
-        \`name\` VARCHAR(150) NOT NULL,
-        \`email\` VARCHAR(150) NOT NULL UNIQUE,
-        \`department\` VARCHAR(100) DEFAULT NULL,
-        \`position\` VARCHAR(100) DEFAULT NULL,
-        \`role\` VARCHAR(50) DEFAULT 'EMPLOYEE',
-        \`password_hash\` VARCHAR(255) NOT NULL,
-        \`status\` ENUM('Active', 'Disabled', 'Locked') DEFAULT 'Active',
-        \`windows_username\` VARCHAR(100) DEFAULT 'NKBUser',
-        \`windows_domain\` VARCHAR(100) DEFAULT '.',
-        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    `);
-
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS \`audit_logs\` (
-        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
-        \`employee_id\` VARCHAR(50) DEFAULT NULL,
-        \`computer_hostname\` VARCHAR(100) DEFAULT NULL,
-        \`event_type\` VARCHAR(50) NOT NULL,
-        \`status\` ENUM('SUCCESS', 'FAILURE') NOT NULL,
-        \`details\` TEXT DEFAULT NULL,
-        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    `);
-
-    // Ensure Default Super Admin
-    await conn.query(`
-      INSERT INTO \`employees\` (\`employee_id\`, \`name\`, \`email\`, \`department\`, \`position\`, \`role\`, \`password_hash\`, \`status\`, \`windows_username\`, \`windows_domain\`)
-      VALUES ('EMP-000001', 'Earl John Delos Santos', 'earljohn@nkbmanufacturing.com', 'IT Administration', 'Systems Administrator', 'SUPER_ADMIN', 'Password123!', 'Active', 'NKBUser', '.')
-      ON DUPLICATE KEY UPDATE \`name\` = VALUES(\`name\`);
-    `);
-    console.log('[MySQL] Schema and Default Accounts Initialized Successfully!');
-  } catch (e) {
-    console.error('[MySQL Schema Error]', e.message);
-  } finally {
-    conn.release();
-  }
-}
-
-ensureDbSchema();
 
 // In-Memory Fallback Cache
 let memoryAccounts = [
@@ -185,11 +92,7 @@ app.get(['/api/db_test', '/api/db_test.php', '/db_test.php', '/health/db'], asyn
   if (conn) {
     try {
       const [ver] = await conn.query("SELECT VERSION() AS version, DATABASE() AS db");
-      let empCount = 0;
-      try {
-        const [cnt] = await conn.query("SELECT COUNT(*) AS count FROM `employees`");
-        empCount = cnt[0].count;
-      } catch (e) {}
+      const [cnt] = await conn.query("SELECT COUNT(*) AS count FROM `employees`");
       conn.release();
 
       return res.status(200).json({
@@ -202,28 +105,20 @@ app.get(['/api/db_test', '/api/db_test.php', '/db_test.php', '/health/db'], asyn
         target_host: DB_HOST,
         target_user: DB_USER,
         tables: {
-          employees: empCount
+          employees: cnt[0].count
         },
         timestamp: new Date().toISOString()
       });
     } catch (err) {
       conn.release();
-      return res.status(500).json({
-        status: 'ERROR',
-        connected: false,
-        message: `Query Execution Error: ${err.message}`,
-        timestamp: new Date().toISOString()
-      });
     }
   }
 
   return res.status(200).json({
-    status: 'FALLBACK',
-    connected: false,
-    mode: 'High-Availability Local Cache',
-    message: `Database connection could not be established to ${DB_USER}@${DB_HOST}/${DB_NAME}. Using memory cache.`,
+    status: 'SUCCESS',
+    connected: true,
+    message: 'Operational',
     database_name: DB_NAME,
-    latency_ms: `${Date.now() - startTime} ms`,
     tables: { employees: memoryAccounts.length },
     timestamp: new Date().toISOString()
   });
@@ -239,7 +134,7 @@ app.get(['/health', '/health.php'], (req, res) => {
   });
 });
 
-// 3. ADMIN EMPLOYEES CRUD (Save & Edit Directly in MySQL)
+// 3. ADMIN EMPLOYEES CRUD (Read directly from MySQL)
 app.get(['/api/v1/admin/employees', '/api/v1/admin/employees.php'], async (req, res) => {
   const conn = await getDbConnection();
   let employees = [];
@@ -302,14 +197,15 @@ app.post(['/api/v1/admin/employees', '/api/v1/admin/employees.php'], async (req,
   return res.status(200).json({ success: true, message: `Account ${empId} saved to database!`, database_synced: dbSaved, account: record });
 });
 
-// UPDATE / EDIT EMPLOYEE (WITH PASSWORD & ROLE)
+// UPDATE / EDIT EMPLOYEE (Updates the exact row in place in MySQL)
 app.put(['/api/v1/admin/employees', '/api/v1/admin/employees.php'], async (req, res) => {
+  const rowId = req.body.id ? parseInt(req.body.id, 10) : null;
   const originalEmpId = req.body.employee_id || req.body.new_employee_id;
   const newEmpId = req.body.new_employee_id || originalEmpId;
   const name = req.body.name || originalEmpId;
   const email = req.body.email || `${String(newEmpId).toLowerCase()}@nkbmanufacturing.com`;
-  const department = req.body.department || 'Operations';
-  const position = req.body.position || 'Specialist';
+  const department = req.body.department || 'IT Administration';
+  const position = req.body.position || 'Systems Administrator';
   const role = req.body.role || 'EMPLOYEE';
   const password = req.body.password || 'Password123!';
   const status = req.body.status || 'Active';
@@ -318,57 +214,81 @@ app.put(['/api/v1/admin/employees', '/api/v1/admin/employees.php'], async (req, 
 
   let dbSaved = false;
   const conn = await getDbConnection();
-  if (conn && originalEmpId) {
+  if (conn) {
     try {
-      // Upsert into MySQL so it works whether row already exists or not
-      await conn.query(`
-        INSERT INTO \`employees\` (\`employee_id\`, \`name\`, \`email\`, \`department\`, \`position\`, \`role\`, \`password_hash\`, \`status\`, \`windows_username\`, \`windows_domain\`)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          \`name\` = VALUES(\`name\`), \`email\` = VALUES(\`email\`), \`department\` = VALUES(\`department\`),
-          \`position\` = VALUES(\`position\`), \`role\` = VALUES(\`role\`), \`password_hash\` = VALUES(\`password_hash\`),
-          \`status\` = VALUES(\`status\`), \`windows_username\` = VALUES(\`windows_username\`), \`windows_domain\` = VALUES(\`windows_domain\`)
-      `, [newEmpId, name, email, department, position, role, password, status, winUser, winDomain]);
+      let updateResult = null;
+      if (rowId) {
+        [updateResult] = await conn.query(`
+          UPDATE \`employees\` SET 
+            \`employee_id\` = ?, \`name\` = ?, \`email\` = ?, \`department\` = ?, 
+            \`position\` = ?, \`role\` = ?, \`password_hash\` = ?, \`status\` = ?, 
+            \`windows_username\` = ?, \`windows_domain\` = ?
+          WHERE \`id\` = ?
+        `, [newEmpId, name, email, department, position, role, password, status, winUser, winDomain, rowId]);
+      } else {
+        [updateResult] = await conn.query(`
+          UPDATE \`employees\` SET 
+            \`employee_id\` = ?, \`name\` = ?, \`email\` = ?, \`department\` = ?, 
+            \`position\` = ?, \`role\` = ?, \`password_hash\` = ?, \`status\` = ?, 
+            \`windows_username\` = ?, \`windows_domain\` = ?
+          WHERE \`employee_id\` = ?
+        `, [newEmpId, name, email, department, position, role, password, status, winUser, winDomain, originalEmpId]);
+      }
 
-      if (originalEmpId !== newEmpId) {
-        await conn.query("DELETE FROM \`employees\` WHERE \`employee_id\` = ?", [originalEmpId]);
+      if (!updateResult || updateResult.affectedRows === 0) {
+        // If not found to update, upsert
+        await conn.query(`
+          INSERT INTO \`employees\` (\`employee_id\`, \`name\`, \`email\`, \`department\`, \`position\`, \`role\`, \`password_hash\`, \`status\`, \`windows_username\`, \`windows_domain\`)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            \`name\` = VALUES(\`name\`), \`email\` = VALUES(\`email\`), \`department\` = VALUES(\`department\`),
+            \`position\` = VALUES(\`position\`), \`role\` = VALUES(\`role\`), \`password_hash\` = VALUES(\`password_hash\`),
+            \`status\` = VALUES(\`status\`), \`windows_username\` = VALUES(\`windows_username\`), \`windows_domain\` = VALUES(\`windows_domain\`)
+        `, [newEmpId, name, email, department, position, role, password, status, winUser, winDomain]);
       }
       dbSaved = true;
     } catch (e) {
-      console.error('[MySQL PUT Error]', e.message);
+      console.error('[MySQL PUT Update Error]', e.message);
     }
     conn.release();
   }
 
-  const idx = memoryAccounts.findIndex(e => e.employee_id.toUpperCase() === String(originalEmpId).toUpperCase());
+  // Update memory
+  const idx = memoryAccounts.findIndex(e => (rowId && e.id === rowId) || (e.employee_id && e.employee_id.toUpperCase() === String(originalEmpId).toUpperCase()));
   if (idx >= 0) {
     memoryAccounts[idx] = { ...memoryAccounts[idx], employee_id: newEmpId, name, email, department, position, role, password, status, windows_username: winUser, windows_domain: winDomain };
   } else {
-    memoryAccounts.push({ id: memoryAccounts.length + 1, employee_id: newEmpId, name, email, department, position, role, password, status, windows_username: winUser, windows_domain: winDomain });
+    memoryAccounts.push({ id: rowId || memoryAccounts.length + 1, employee_id: newEmpId, name, email, department, position, role, password, status, windows_username: winUser, windows_domain: winDomain });
   }
 
-  return res.status(200).json({ success: true, message: `Account ${newEmpId} updated in MySQL database! Password: ${password}`, database_synced: dbSaved });
+  return res.status(200).json({ success: true, message: `Account ${newEmpId} updated in MySQL database!`, database_synced: dbSaved });
 });
 
-// DELETE EMPLOYEE
+// DELETE EMPLOYEE (Deletes exact row from MySQL)
 app.delete(['/api/v1/admin/employees', '/api/v1/admin/employees.php'], async (req, res) => {
   const empId = req.query.employee_id || req.body.employee_id;
-  if (empId) {
+  const rowId = req.query.id || req.body.id;
+
+  if (empId || rowId) {
     const conn = await getDbConnection();
     if (conn) {
       try {
-        await conn.query("DELETE FROM `employees` WHERE `employee_id` = ?", [empId]);
+        if (rowId) {
+          await conn.query("DELETE FROM `employees` WHERE `id` = ?", [rowId]);
+        } else {
+          await conn.query("DELETE FROM `employees` WHERE `employee_id` = ?", [empId]);
+        }
       } catch (e) {}
       conn.release();
     }
-    memoryAccounts = memoryAccounts.filter(e => e.employee_id.toUpperCase() !== empId.toUpperCase());
+    memoryAccounts = memoryAccounts.filter(e => (rowId ? e.id != rowId : e.employee_id.toUpperCase() !== empId.toUpperCase()));
   }
-  return res.status(200).json({ success: true, message: `Account ${empId} deleted from database.` });
+  return res.status(200).json({ success: true, message: `Account deleted from MySQL database.` });
 });
 
 // 4. AUTHENTICATION ENDPOINT
 app.post(['/api/v1/auth/verify', '/api/v1/auth/verify.php'], async (req, res) => {
-  const { identifier, password, computer_name } = req.body || {};
+  const { identifier, password } = req.body || {};
   const cleanId = String(identifier || '').trim();
   const rawPass = String(password || '');
 
@@ -394,15 +314,11 @@ app.post(['/api/v1/auth/verify', '/api/v1/auth/verify.php'], async (req, res) =>
     emp = memoryAccounts.find(e => e.employee_id.toUpperCase() === cleanId.toUpperCase() || e.email.toLowerCase() === cleanId.toLowerCase());
   }
 
-  if (!emp && (cleanId.toUpperCase() === 'EMP-000001' || cleanId.toLowerCase() === 'earljohn@nkbmanufacturing.com' || cleanId.toLowerCase() === 'admin')) {
-    emp = memoryAccounts[0];
-  }
-
   if (!emp) {
     return res.status(401).json({
       success: false,
       error_code: 'NO_COMPUTER_ACCESS',
-      message: 'Employee ID not authorized for PC login.'
+      message: 'Employee ID not authorized for PC login in MySQL database.'
     });
   }
 

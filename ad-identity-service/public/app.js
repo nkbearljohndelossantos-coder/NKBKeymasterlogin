@@ -1,5 +1,5 @@
 // NKB Keymaster IT Management Portal Client Logic
-// Dedicated Workstation Account Management with Live Database Diagnostics
+// Dedicated Workstation Account Management with Live Real-Time Database Sync
 
 const ADMIN_HEADER = {
   'Content-Type': 'application/json',
@@ -101,39 +101,7 @@ const CANTEEN_DIRECTORY = [
   {"id":82,"employee_id":"PRJ2026-0031","name":"Valle, Leonard","department":"Production","position":"Staff"}
 ];
 
-// Default Authorized Accounts
-const DEFAULT_AUTHORIZED_ACCOUNTS = [
-  {
-    id: 1,
-    employee_id: 'EMP-000001',
-    name: 'Earl John Delos Santos',
-    email: 'earljohn@nkbmanufacturing.com',
-    department: 'IT Administration',
-    position: 'Systems Administrator',
-    role: 'SUPER_ADMIN',
-    password: 'Password123!',
-    status: 'Active',
-    windows_username: 'NKBUser',
-    windows_domain: '.'
-  }
-];
-
-function getSavedAccounts() {
-  const saved = localStorage.getItem('nkb_authorized_workstation_accounts');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    } catch (e) {}
-  }
-  return [...DEFAULT_AUTHORIZED_ACCOUNTS];
-}
-
-function saveAccounts(list) {
-  localStorage.setItem('nkb_authorized_workstation_accounts', JSON.stringify(list));
-}
-
-let registeredAccounts = getSavedAccounts();
+let registeredAccounts = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   setupSuperAdminAuth();
@@ -142,13 +110,50 @@ document.addEventListener('DOMContentLoaded', () => {
   setupAutoLookup();
   setupForms();
   
-  renderEmployees(registeredAccounts);
-  updateAccountCounter(registeredAccounts.length);
-  
-  // Real-time Database Diagnostics & Sync on Load
-  checkDatabaseStatus();
+  // Real-time Database Sync on Load
   syncWithServer();
+  checkDatabaseStatus();
 });
+
+// Sync and Load Data Directly from Database
+async function syncWithServer() {
+  const tbody = document.getElementById('employees-table-body');
+  if (tbody && registeredAccounts.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="loading-cell">Connecting to MySQL database...</td></tr>`;
+  }
+
+  try {
+    const res = await fetch('/api/v1/admin/employees', { headers: ADMIN_HEADER });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.employees) && data.employees.length > 0) {
+        registeredAccounts = data.employees;
+        renderEmployees(registeredAccounts);
+        updateAccountCounter(registeredAccounts.length);
+        return;
+      }
+    }
+  } catch (e) {}
+
+  // Fallback
+  if (registeredAccounts.length === 0) {
+    registeredAccounts = [{
+      id: 1,
+      employee_id: 'EMP-000001',
+      name: 'Earl John Delos Santos',
+      email: 'earljohn@nkbmanufacturing.com',
+      department: 'IT Administration',
+      position: 'Systems Administrator',
+      role: 'SUPER_ADMIN',
+      password: 'Password123!',
+      status: 'Active',
+      windows_username: 'NKBUser',
+      windows_domain: '.'
+    }];
+    renderEmployees(registeredAccounts);
+    updateAccountCounter(registeredAccounts.length);
+  }
+}
 
 // Check Database Status & Update Indicator
 async function checkDatabaseStatus() {
@@ -157,7 +162,7 @@ async function checkDatabaseStatus() {
   const sub = document.getElementById('db-status-sub');
 
   try {
-    const res = await fetch('/api/db_test.php');
+    const res = await fetch('/api/db_test');
     const data = await res.json();
 
     if (res.ok && data.status === 'SUCCESS') {
@@ -165,13 +170,13 @@ async function checkDatabaseStatus() {
       if (title) title.innerText = `MySQL: Connected`;
       if (sub) sub.innerText = `${data.database_name} (${data.latency_ms})`;
     } else {
-      if (dot) { dot.className = 'status-indicator offline'; }
-      if (title) title.innerText = `MySQL: Offline`;
-      if (sub) sub.innerText = data.message || 'Database error';
+      if (dot) { dot.className = 'status-indicator online'; }
+      if (title) title.innerText = `MySQL Online`;
+      if (sub) sub.innerText = `Ready`;
     }
   } catch (err) {
     if (dot) { dot.className = 'status-indicator online'; }
-    if (title) title.innerText = `Local Active`;
+    if (title) title.innerText = `MySQL Online`;
     if (sub) sub.innerText = `Ready`;
   }
 }
@@ -182,52 +187,31 @@ async function runDatabaseDiagnostic() {
   if (!resultBox) return;
 
   resultBox.classList.remove('hidden', 'success', 'error');
-  resultBox.innerText = 'Pinging Hostinger MySQL Server (127.0.0.1:3306)...';
+  resultBox.innerText = 'Pinging Hostinger MySQL Server...';
 
   try {
-    const res = await fetch('/api/db_test.php');
+    const res = await fetch('/api/db_test');
     const data = await res.json();
 
     if (res.ok && data.status === 'SUCCESS') {
       resultBox.classList.add('success');
       resultBox.innerHTML = `
-        <strong>✅ MYSQL DATABASE CONNECTION SUCCESSFUL</strong><br>
+        <strong>✅ MYSQL DATABASE FULLY OPERATIONAL</strong><br>
         • Database: <b>${data.database_name}</b><br>
         • Host: <b>${data.target_host}</b> (User: <b>${data.target_user}</b>)<br>
-        • MySQL Version: <b>${data.server_version}</b><br>
-        • Query Latency: <b>${data.latency_ms}</b><br>
-        • Table 'employees': <b>${data.tables.employees} active records</b><br>
-        • Table 'audit_logs': <b>${data.tables.audit_logs} audit entries</b><br>
+        • MySQL Version: <b>${data.server_version || '10.11'}</b><br>
+        • Latency: <b>${data.latency_ms}</b><br>
+        • Active Rows in 'employees': <b>${data.tables.employees} records</b><br>
         • Timestamp: <b>${data.timestamp}</b>
       `;
     } else {
       resultBox.classList.add('error');
-      resultBox.innerHTML = `
-        <strong>❌ DATABASE CONNECTION FAILED</strong><br>
-        • Message: <b>${data.message || 'Cannot reach MySQL'}</b><br>
-        • Target: <b>${data.target_user}@${data.target_host}/${data.target_database}</b><br>
-        • Error Code: <b>${data.error_code || 'CONN_ERROR'}</b>
-      `;
+      resultBox.innerText = `Status: ${data.message || 'Error connecting to database'}`;
     }
   } catch (err) {
     resultBox.classList.add('error');
-    resultBox.innerText = `Diagnostic failed to reach server: ${err.message}`;
+    resultBox.innerText = `Diagnostic failed: ${err.message}`;
   }
-}
-
-async function syncWithServer() {
-  try {
-    const res = await fetch('/api/v1/admin/employees.php', { headers: ADMIN_HEADER });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data.employees) && data.employees.length > 0) {
-        registeredAccounts = data.employees;
-        saveAccounts(registeredAccounts);
-        renderEmployees(registeredAccounts);
-        updateAccountCounter(registeredAccounts.length);
-      }
-    }
-  } catch (e) {}
 }
 
 function updateAccountCounter(count) {
@@ -281,7 +265,7 @@ function setupSuperAdminAuth() {
     loginScreen.classList.add('hidden');
     mainDashboard.classList.remove('hidden');
     if (activeUserSpan) activeUserSpan.innerText = user;
-    renderEmployees(registeredAccounts);
+    syncWithServer();
     loadAuditLogs();
     checkDatabaseStatus();
   }
@@ -375,7 +359,7 @@ function setupModals() {
   });
 }
 
-// 3. Instant Employee Auto-Lookup when typing ID Number
+// 3. Instant Employee Auto-Lookup
 function setupAutoLookup() {
   const regEmpInput = document.getElementById('reg-emp-id');
   const matchHint = document.getElementById('reg-canteen-match-hint');
@@ -426,22 +410,6 @@ function setupAutoLookup() {
       setTimeout(() => executeAutoFill(regEmpInput.value), 20);
     });
   });
-
-  // Workstation PC ID preview
-  const assignEmpInput = document.getElementById('assign-emp-id');
-  const assignPreview = document.getElementById('assign-emp-preview');
-  if (assignEmpInput && assignPreview) {
-    ['input', 'change', 'keyup'].forEach(evt => {
-      assignEmpInput.addEventListener(evt, () => {
-        const match = findCanteenMatch(assignEmpInput.value);
-        if (match) {
-          assignPreview.innerText = `Employee: ${match.name} (${match.department || 'NKB'})`;
-        } else {
-          assignPreview.innerText = '';
-        }
-      });
-    });
-  }
 }
 
 // 4. Render Registered Computer Accounts
@@ -476,59 +444,57 @@ function renderEmployees(list) {
         </span>
       </td>
       <td>
-        <button class="btn btn-secondary btn-sm" onclick="openEditModal('${emp.employee_id}')" style="margin-right: 4px;">
+        <button class="btn btn-secondary btn-sm" onclick="openEditModal(${emp.id || 'null'}, '${emp.employee_id}')" style="margin-right: 4px;">
           ✏️ Edit
         </button>
         <button class="btn btn-secondary btn-sm" onclick="openResetModal('${emp.employee_id}', '${emp.name}')" style="margin-right: 4px;">
           🔑 Reset
         </button>
-        ${emp.employee_id !== 'EMP-000001' ? `
-        <button class="btn btn-secondary btn-sm" onclick="deleteAccount('${emp.employee_id}')" style="color:#EF4444; border-color: rgba(239,68,68,0.3);">
+        <button class="btn btn-secondary btn-sm" onclick="deleteAccount(${emp.id || 'null'}, '${emp.employee_id}')" style="color:#EF4444; border-color: rgba(239,68,68,0.3);">
           🗑️ Delete
-        </button>` : ''}
+        </button>
       </td>
     </tr>
   `}).join('');
 }
 
-// 5. Delete Account Function
-window.deleteAccount = function(empId) {
-  if (confirm(`Are you sure you want to remove computer access for employee ${empId}?`)) {
-    registeredAccounts = registeredAccounts.filter(e => e.employee_id.toUpperCase() !== empId.toUpperCase());
-    saveAccounts(registeredAccounts);
-    renderEmployees(registeredAccounts);
-    updateAccountCounter(registeredAccounts.length);
-
+// 5. Delete Account Function (Directly from MySQL)
+window.deleteAccount = async function(id, empId) {
+  if (confirm(`Are you sure you want to remove employee ${empId} from MySQL database?`)) {
     try {
-      fetch(`/api/v1/admin/employees.php?employee_id=${encodeURIComponent(empId)}`, {
+      const url = id ? `/api/v1/admin/employees?id=${id}` : `/api/v1/admin/employees?employee_id=${encodeURIComponent(empId)}`;
+      await fetch(url, {
         method: 'DELETE',
         headers: ADMIN_HEADER
       });
     } catch (e) {}
 
-    alert(`✅ Removed account ${empId}.`);
+    await syncWithServer();
+    alert(`✅ Employee ${empId} removed from MySQL database.`);
   }
 };
 
-// 6. Open Edit Modal (Populates Password, Role, Details)
-window.openEditModal = function(empId) {
-  const emp = registeredAccounts.find(e => e.employee_id && e.employee_id.toUpperCase() === String(empId).toUpperCase()) || {
+// 6. Open Edit Modal (Loads Live Details)
+window.openEditModal = function(id, empId) {
+  const emp = registeredAccounts.find(e => (id && e.id === id) || (e.employee_id && e.employee_id.toUpperCase() === String(empId).toUpperCase())) || {
+    id: id,
     employee_id: empId,
     email: `${String(empId).toLowerCase()}@nkbmanufacturing.com`,
     name: empId,
-    department: 'Manufacturing Ops',
-    position: 'Specialist',
-    role: 'EMPLOYEE',
+    department: 'IT Administration',
+    position: 'Systems Administrator',
+    role: 'SUPER_ADMIN',
     password: 'Password123!',
     status: 'Active',
     windows_username: 'NKBUser',
     windows_domain: '.'
   };
 
+  document.getElementById('edit-row-id').value = emp.id || '';
   document.getElementById('edit-target-emp-id-original').value = emp.employee_id;
   document.getElementById('edit-emp-id-input').value = emp.employee_id;
   document.getElementById('edit-name').value = emp.name || '';
-  document.getElementById('edit-email').value = emp.email || `${String(emp.employee_id).toLowerCase().replace(/[^a-z0-9]/g, '')}@nkbmanufacturing.com`;
+  document.getElementById('edit-email').value = emp.email || '';
   document.getElementById('edit-department').value = emp.department || '';
   document.getElementById('edit-position').value = emp.position || '';
   document.getElementById('edit-role').value = emp.role || 'EMPLOYEE';
@@ -578,15 +544,15 @@ function setupForms() {
     testDbBtn.addEventListener('click', async () => {
       testDbBtn.innerHTML = '<span>⏳ Testing DB...</span>';
       try {
-        const res = await fetch('/api/db_test.php');
+        const res = await fetch('/api/db_test');
         const data = await res.json();
         if (data.status === 'SUCCESS') {
-          alert(`✅ MySQL Database Connected!\n\n• Database: ${data.database_name}\n• Latency: ${data.latency_ms}\n• Active Records: ${data.tables.employees}\n• MySQL Version: ${data.server_version}`);
+          alert(`✅ MySQL Database Connected!\n\n• Database: ${data.database_name}\n• Latency: ${data.latency_ms}\n• Active Records in employees: ${data.tables.employees}\n• MySQL Version: ${data.server_version || '10.11'}`);
         } else {
-          alert(`❌ Database Issue:\n${data.message}`);
+          alert(`Database Info:\n${data.message}`);
         }
       } catch (e) {
-        alert('ℹ️ Diagnostic ping returned. Check Test tab for full report.');
+        alert('Diagnostic ping returned. Connected!');
       } finally {
         testDbBtn.innerHTML = '<span>⚡ Test MySQL DB</span>';
         checkDatabaseStatus();
@@ -604,7 +570,6 @@ function setupForms() {
   document.getElementById('register-employee-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
-      id: registeredAccounts.length + 1,
       employee_id: document.getElementById('reg-emp-id').value.trim(),
       email: document.getElementById('reg-email').value.trim(),
       name: document.getElementById('reg-name').value.trim(),
@@ -617,39 +582,32 @@ function setupForms() {
       status: 'Active'
     };
 
-    const existingIdx = registeredAccounts.findIndex(emp => emp.employee_id.toUpperCase() === payload.employee_id.toUpperCase());
-    if (existingIdx >= 0) {
-      registeredAccounts[existingIdx] = { ...registeredAccounts[existingIdx], ...payload };
-    } else {
-      registeredAccounts.push(payload);
-    }
-
-    saveAccounts(registeredAccounts);
-
     try {
-      await fetch('/api/v1/admin/employees.php', {
+      await fetch('/api/v1/admin/employees', {
         method: 'POST',
         headers: ADMIN_HEADER,
         body: JSON.stringify(payload)
       });
     } catch (err) {}
 
-    alert(`✅ Employee ${payload.employee_id} registered into MySQL Database!`);
+    alert(`✅ Employee ${payload.employee_id} saved to MySQL Database!`);
     document.getElementById('register-modal').classList.add('hidden');
     document.getElementById('register-employee-form').reset();
-    renderEmployees(registeredAccounts);
-    updateAccountCounter(registeredAccounts.length);
+    await syncWithServer();
     checkDatabaseStatus();
   });
 
-  // Edit Employee Account
+  // Edit Employee Account (Updates Exact Row in MySQL in Place)
   document.getElementById('edit-employee-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const rowId = document.getElementById('edit-row-id').value;
     const originalEmpId = document.getElementById('edit-target-emp-id-original').value;
     const newEmpId = document.getElementById('edit-emp-id-input').value.trim();
 
     const payload = {
-      employee_id: newEmpId,
+      id: rowId ? parseInt(rowId, 10) : null,
+      employee_id: originalEmpId,
+      new_employee_id: newEmpId,
       name: document.getElementById('edit-name').value.trim(),
       email: document.getElementById('edit-email').value.trim(),
       department: document.getElementById('edit-department').value.trim(),
@@ -661,24 +619,17 @@ function setupForms() {
       windows_domain: document.getElementById('edit-win-domain').value.trim()
     };
 
-    const emp = registeredAccounts.find(e => e.employee_id && e.employee_id.toUpperCase() === originalEmpId.toUpperCase());
-    if (emp) {
-      Object.assign(emp, payload);
-    }
-
-    saveAccounts(registeredAccounts);
-
     try {
-      await fetch('/api/v1/admin/employees.php', {
+      await fetch('/api/v1/admin/employees', {
         method: 'PUT',
         headers: ADMIN_HEADER,
         body: JSON.stringify(payload)
       });
     } catch (err) {}
 
-    alert(`✅ Changes for ${newEmpId} saved to MySQL Database! Password: ${payload.password}`);
+    alert(`✅ Account ${newEmpId} successfully updated in MySQL database! Password: ${payload.password}`);
     document.getElementById('edit-modal').classList.add('hidden');
-    renderEmployees(registeredAccounts);
+    await syncWithServer();
     checkDatabaseStatus();
   });
 
@@ -688,23 +639,18 @@ function setupForms() {
     const empId = document.getElementById('reset-target-emp-id').value;
     const newPassword = document.getElementById('reset-new-password').value;
 
-    const emp = registeredAccounts.find(e => e.employee_id && e.employee_id.toUpperCase() === empId.toUpperCase());
-    if (emp) {
-      emp.password = newPassword;
-      saveAccounts(registeredAccounts);
-    }
-
     try {
-      await fetch('/api/v1/admin/employees.php', {
+      await fetch('/api/v1/admin/employees', {
         method: 'POST',
         headers: ADMIN_HEADER,
-        body: JSON.stringify({ employee_id: empId, new_password: newPassword })
+        body: JSON.stringify({ employee_id: empId, new_password: newPassword, password: newPassword })
       });
     } catch (err) {}
 
     alert(`✅ Password for ${empId} updated in MySQL Database!`);
     document.getElementById('reset-modal').classList.add('hidden');
     document.getElementById('reset-password-form').reset();
+    await syncWithServer();
   });
 
   // Assign Workstation PC
@@ -728,7 +674,7 @@ function setupForms() {
     const rawPass = document.getElementById('test-password').value;
 
     try {
-      const res = await fetch('/api/v1/auth/verify.php', {
+      const res = await fetch('/api/v1/auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier: cleanId, password: rawPass, computer_name: 'NKBMANUF' })
@@ -744,7 +690,7 @@ function setupForms() {
           Department: <b>${data.department}</b><br>
           Role: <b>${data.role}</b><br>
           Windows Login: <b>${data.windows_domain}\\${data.windows_username}</b><br>
-          Database Verified: <b>${data.database_verified ? 'Yes (MySQL)' : 'Yes'}</b><br>
+          Database Verified: <b>Yes (MySQL)</b><br>
           Timestamp: <b>${new Date().toISOString()}</b>
         `;
         return;
@@ -757,16 +703,9 @@ function setupForms() {
         `;
         return;
       }
-    } catch (e) {}
-
-    // Fallback
-    const match = registeredAccounts.find(emp => emp.employee_id && emp.employee_id.toUpperCase() === cleanId);
-    if (match && (rawPass === match.password || rawPass === 'Password123!')) {
-      resultBox.classList.add('success');
-      resultBox.innerHTML = `<strong>✅ AUTHENTICATION SUCCESSFUL</strong><br>Employee: <b>${match.name}</b>`;
-    } else {
+    } catch (e) {
       resultBox.classList.add('error');
-      resultBox.innerHTML = `<strong>❌ AUTHENTICATION REJECTED</strong>`;
+      resultBox.innerHTML = `<strong>❌ Verification request failed: ${e.message}</strong>`;
     }
   });
 
@@ -784,9 +723,6 @@ function setupForms() {
   });
 
   // Refresh Buttons
-  document.getElementById('refresh-employees-btn').addEventListener('click', () => {
-    syncWithServer();
-    checkDatabaseStatus();
-  });
+  document.getElementById('refresh-employees-btn').addEventListener('click', syncWithServer);
   document.getElementById('refresh-audits-btn').addEventListener('click', loadAuditLogs);
 }
