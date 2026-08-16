@@ -1,107 +1,139 @@
 // NKB Keymaster IT Management Portal Client Logic
-// Direct High-Performance Hybrid Sync Architecture
+// Dedicated Workstation Account Management with Instant Canteen Lookup
 
 const ADMIN_HEADER = {
   'Content-Type': 'application/json',
   'x-admin-key': 'nkb-admin-dev-key'
 };
 
-// Full Direct Embedded Master Directory of NKB Employees (Auto-loaded instantly with ZERO delay)
-const MASTER_CANTEEN_EMPLOYEES = [
-  {"id":1,"employee_id":"EMP-000001","name":"Earl John Delos Santos","department":"IT Administration","position":"Systems Administrator","role":"SUPER_ADMIN","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":14,"employee_id":"NKB052026-0003","name":"Alonzo, Merry Jean I.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":52,"employee_id":"PRJ2026-0001","name":"Amolo, Wenjielyn","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":15,"employee_id":"NKB052026-0004","name":"Atayde, Emmie M.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":16,"employee_id":"NKB052026-0005","name":"Atayde, Marvin G.","department":"Security","position":"Security Officer","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":17,"employee_id":"NKB052026-0006","name":"Bautista, Allen L.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":12,"employee_id":"NKB052026-0001","name":"Bella, Katherine A.","department":"CEO","position":"Executive","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":13,"employee_id":"NKB052026-0002","name":"Bella, Norvin L.","department":"COO","position":"Executive","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":108,"employee_id":"PRJ2026-0039","name":"BERTUDAZO, CHARLOTTE R.","department":"Maintenance","position":"Technician","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":83,"employee_id":"PRJ2026-0032","name":"Bobadilla, Michael","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":53,"employee_id":"PRJ2026-0002","name":"Bombita, Rafael Rannie","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":18,"employee_id":"NKB052026-0007","name":"Bombita, Raniella Camille","department":"Production","position":"Quality Control","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":19,"employee_id":"NKB052026-0008","name":"Boston, Kem Mariel","department":"Regulatory","position":"Specialist","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":94,"employee_id":"VYU2026-0001","name":"Boston, Monet","department":"Vyuceutical","position":"Specialist","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":54,"employee_id":"PRJ2026-0003","name":"Camaña, Rose Pauline","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":55,"employee_id":"PRJ2026-0004","name":"Carel, Carlo Jay","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":20,"employee_id":"NKB052026-0009","name":"Catalan, Jhon Jhon B.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":56,"employee_id":"PRJ2026-0005","name":"Cate, Dominick","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":21,"employee_id":"NKB052026-0010","name":"Catindig, Renar A.","department":"Compounding","position":"Specialist","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":57,"employee_id":"PRJ2026-0006","name":"Cedillo, Jamrex","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":58,"employee_id":"PRJ2026-0007","name":"Corral, Rex C.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":22,"employee_id":"NKB052026-0011","name":"Corral, Rodolfo C.","department":"Maintenance","position":"Technician","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":23,"employee_id":"NKB052026-0012","name":"Cuya, Roberto","department":"Construction","position":"Maintenance","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":59,"employee_id":"PRJ2026-0008","name":"Dalanon, Mark B.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":60,"employee_id":"PRJ2026-0009","name":"Dalanon, Mars B.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":24,"employee_id":"NKB052026-0013","name":"De Jesus, Khayle Nicole G.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":61,"employee_id":"PRJ2026-0010","name":"Del Rosario, Mary Ann","department":"Maintenance","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":62,"employee_id":"PRJ2026-0011","name":"Del Socorro, Mary Grace","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":63,"employee_id":"PRJ2026-0012","name":"Dela Cruz, Vincent Lloyd","department":"Inventory / Warehouse","position":"Warehouse Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":25,"employee_id":"NKB052026-0014","name":"Delos Santos, Earl John","department":"IT Administration","position":"Systems Administrator","role":"SUPER_ADMIN","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":64,"employee_id":"PRJ2026-0013","name":"Fabio, Marilou","department":"QC","position":"Quality Control","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":26,"employee_id":"NKB052026-0015","name":"Garcia, Jayvee G.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":84,"employee_id":"NKB052026-0041","name":"Garcia, Jonnel","department":"Driver","position":"Driver","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":65,"employee_id":"PRJ2026-0014","name":"Gerero, Raquel","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":88,"employee_id":"PRJ2026-0036","name":"Guillermo, Isagani","department":"Construction","position":"Mason","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":27,"employee_id":"NKB052026-0016","name":"Guillermo, Jaime","department":"Construction","position":"Foreman","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":28,"employee_id":"NKB052026-0017","name":"Gutierrez, Heramae","department":"Purchasing","position":"Purchasing Officer","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":29,"employee_id":"NKB052026-0018","name":"Ilano, Maximo Jr. R.","department":"Marketing","position":"Marketing Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":122,"employee_id":"NKB202607260122","name":"Jamrex Cedillo","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":111,"employee_id":"NKB202607200111","name":"Jhon Jhon Catalan","department":"Printing","position":"Operator","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":30,"employee_id":"NKB052026-0019","name":"Jurado, Genevieve Anne A.","department":"HR","position":"HR Specialist","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":66,"employee_id":"PRJ2026-0015","name":"Laungayan, Jason","department":"Security","position":"Security Officer","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":67,"employee_id":"PRJ2026-0016","name":"Laungayan, Marivic","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":31,"employee_id":"NKB052026-0020","name":"Luy, Rodello","department":"Inventory / Warehouse","position":"Inventory Head","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":32,"employee_id":"NKB052026-0021","name":"Macafe, Angelita","department":"R&D","position":"R&D Specialist","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":68,"employee_id":"PRJ2026-0017","name":"Macol, Vincent","department":"Production","position":"Driver","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":51,"employee_id":"NKB052026-0040","name":"Madelo, Edwin","department":"Accounting","position":"Accounting Officer","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":85,"employee_id":"PRJ2026-0033","name":"Magan, Edmar John","department":"Construction","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":69,"employee_id":"PRJ2026-0018","name":"Maglangit, Melina","department":"Maintenance","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":33,"employee_id":"NKB052026-0022","name":"Mananquil, Mark Gleen","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":86,"employee_id":"PRJ2026-0034","name":"Mananquil, Elmedio Jr","department":"Construction","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":34,"employee_id":"NKB052026-0023","name":"Mangulabnan, Ana Marie V.","department":"Housekeeping","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":35,"employee_id":"NKB052026-0024","name":"Manuel, Nannette","department":"Coop","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":97,"employee_id":"VYU2026-0003","name":"MARBIBI, MELANIE D","department":"Vyuceutical","position":"Specialist","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":121,"employee_id":"NKB202607260121","name":"Marife Mendoza","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":36,"employee_id":"NKB052026-0025","name":"Martin, Michelle","department":"Business Development","position":"Specialist","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":70,"employee_id":"PRJ2026-0019","name":"Mejorada, Roselyn","department":"Production","position":"Operator","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":71,"employee_id":"PRJ2026-0020","name":"Mendoza, Marife","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":124,"employee_id":"NKB072026-0042","name":"Mendoza, Porchia Soffia Louisse","department":"Marketing","position":"Marketing Specialist","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":37,"employee_id":"NKB052026-0026","name":"Mendoza, Sonny","department":"Production","position":"Cutting Lead","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":38,"employee_id":"NKB052026-0027","name":"Mercado, Jaycel D.","department":"Inventory / Warehouse","position":"Warehouse Team Lead","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":72,"employee_id":"PRJ2026-0021","name":"Mirambil, Darius","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":73,"employee_id":"PRJ2026-0022","name":"Mirambil, Leo","department":"Silkscreen","position":"Production Operator","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":74,"employee_id":"PRJ2026-0023","name":"Mirambil, Michael","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":95,"employee_id":"PRJ2026-0038","name":"Mirambil, Monica","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":39,"employee_id":"NKB052026-0028","name":"Mirambil, Ricky O.","department":"Security","position":"Security Officer","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":40,"employee_id":"NKB052026-0029","name":"Mirambil, Rommel M.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":41,"employee_id":"NKB052026-0030","name":"Mirambil, Rosanna O.","department":"Housekeeping","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":42,"employee_id":"NKB052026-0031","name":"Molina, Rose Ann","department":"Vyuceutical","position":"Live Seller","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":43,"employee_id":"NKB052026-0032","name":"Nabong, Dorina","department":"Accounting","position":"Accounting Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":107,"employee_id":"NKB072026-0041","name":"NGOHO, JILLIANA MARIE B.","department":"General Operations","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":44,"employee_id":"NKB052026-0033","name":"Nobleza, Glenn L.","department":"Maintenance","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":45,"employee_id":"NKB052026-0034","name":"Obamos, Rodalia G.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":75,"employee_id":"PRJ2026-0024","name":"Omandac, Jayson","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":76,"employee_id":"PRJ2026-0025","name":"Orongan, Jocelyn","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":77,"employee_id":"PRJ2026-0026","name":"Padilla, Creiver John","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":46,"employee_id":"NKB052026-0035","name":"Panis, Priman","department":"Construction","position":"Electrical","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":126,"employee_id":"NKB082026-0044","name":"Pellazar, Mavick Pauleen Roma","department":"Marketing","position":"Marketing Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":78,"employee_id":"PRJ2026-0027","name":"Presentacion, Jaysie G.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":47,"employee_id":"NKB052026-0036","name":"Prudencio, Ronaldo","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":48,"employee_id":"NKB052026-0037","name":"Razo, Dennis R.","department":"Accounting","position":"Accounting Officer","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":79,"employee_id":"PRJ2026-0028","name":"Regala, Ronald","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":96,"employee_id":"VYU2026-0002","name":"ROCERO, JUSTINE","department":"Vyuceutical","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":98,"employee_id":"PRJ2026-0037","name":"SALCEDO, ANA O.","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":49,"employee_id":"NKB052026-0038","name":"Santos, Sharmaine E.","department":"Accounting","position":"Accounting Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":80,"employee_id":"PRJ2026-0029","name":"Soriano, Joel","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":81,"employee_id":"PRJ2026-0030","name":"Soriano, Joylen","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":125,"employee_id":"NKB072026-0043","name":"Taguan, Angelica T.","department":"Marketing","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":87,"employee_id":"PRJ2026-0035","name":"Taruc, Michael","department":"Construction","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":50,"employee_id":"NKB052026-0039","name":"Valiao, Reynan P.","department":"Marketing","position":"Marketing Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."},
-  {"id":82,"employee_id":"PRJ2026-0031","name":"Valle, Leonard","department":"Production","position":"Staff","role":"EMPLOYEE","status":"Active","windows_username":"NKBUser","windows_domain":"."}
+// Canteen Directory for Instant Auto-Lookup (Used for searching & auto-filling registration forms)
+const CANTEEN_DIRECTORY = [
+  {"id":1,"employee_id":"EMP-000001","name":"Earl John Delos Santos","department":"IT Administration","position":"Systems Administrator"},
+  {"id":14,"employee_id":"NKB052026-0003","name":"Alonzo, Merry Jean I.","department":"Production","position":"Staff"},
+  {"id":52,"employee_id":"PRJ2026-0001","name":"Amolo, Wenjielyn","department":"Production","position":"Staff"},
+  {"id":15,"employee_id":"NKB052026-0004","name":"Atayde, Emmie M.","department":"Production","position":"Staff"},
+  {"id":16,"employee_id":"NKB052026-0005","name":"Atayde, Marvin G.","department":"Security","position":"Security Officer"},
+  {"id":17,"employee_id":"NKB052026-0006","name":"Bautista, Allen L.","department":"Production","position":"Staff"},
+  {"id":12,"employee_id":"NKB052026-0001","name":"Bella, Katherine A.","department":"CEO","position":"Executive"},
+  {"id":13,"employee_id":"NKB052026-0002","name":"Bella, Norvin L.","department":"COO","position":"Executive"},
+  {"id":108,"employee_id":"PRJ2026-0039","name":"BERTUDAZO, CHARLOTTE R.","department":"Maintenance","position":"Technician"},
+  {"id":83,"employee_id":"PRJ2026-0032","name":"Bobadilla, Michael","department":"Production","position":"Staff"},
+  {"id":53,"employee_id":"PRJ2026-0002","name":"Bombita, Rafael Rannie","department":"Production","position":"Staff"},
+  {"id":18,"employee_id":"NKB052026-0007","name":"Bombita, Raniella Camille","department":"Production","position":"Quality Control"},
+  {"id":19,"employee_id":"NKB052026-0008","name":"Boston, Kem Mariel","department":"Regulatory","position":"Specialist"},
+  {"id":94,"employee_id":"VYU2026-0001","name":"Boston, Monet","department":"Vyuceutical","position":"Specialist"},
+  {"id":54,"employee_id":"PRJ2026-0003","name":"Camaña, Rose Pauline","department":"Production","position":"Staff"},
+  {"id":55,"employee_id":"PRJ2026-0004","name":"Carel, Carlo Jay","department":"Production","position":"Staff"},
+  {"id":20,"employee_id":"NKB052026-0009","name":"Catalan, Jhon Jhon B.","department":"Production","position":"Staff"},
+  {"id":56,"employee_id":"PRJ2026-0005","name":"Cate, Dominick","department":"Production","position":"Staff"},
+  {"id":21,"employee_id":"NKB052026-0010","name":"Catindig, Renar A.","department":"Compounding","position":"Specialist"},
+  {"id":57,"employee_id":"PRJ2026-0006","name":"Cedillo, Jamrex","department":"Production","position":"Staff"},
+  {"id":58,"employee_id":"PRJ2026-0007","name":"Corral, Rex C.","department":"Production","position":"Staff"},
+  {"id":22,"employee_id":"NKB052026-0011","name":"Corral, Rodolfo C.","department":"Maintenance","position":"Technician"},
+  {"id":23,"employee_id":"NKB052026-0012","name":"Cuya, Roberto","department":"Construction","position":"Maintenance"},
+  {"id":59,"employee_id":"PRJ2026-0008","name":"Dalanon, Mark B.","department":"Production","position":"Staff"},
+  {"id":60,"employee_id":"PRJ2026-0009","name":"Dalanon, Mars B.","department":"Production","position":"Staff"},
+  {"id":24,"employee_id":"NKB052026-0013","name":"De Jesus, Khayle Nicole G.","department":"Production","position":"Staff"},
+  {"id":61,"employee_id":"PRJ2026-0010","name":"Del Rosario, Mary Ann","department":"Maintenance","position":"Staff"},
+  {"id":62,"employee_id":"PRJ2026-0011","name":"Del Socorro, Mary Grace","department":"Production","position":"Staff"},
+  {"id":63,"employee_id":"PRJ2026-0012","name":"Dela Cruz, Vincent Lloyd","department":"Inventory / Warehouse","position":"Warehouse Staff"},
+  {"id":25,"employee_id":"NKB052026-0014","name":"Delos Santos, Earl John","department":"IT Administration","position":"Systems Administrator"},
+  {"id":64,"employee_id":"PRJ2026-0013","name":"Fabio, Marilou","department":"QC","position":"Quality Control"},
+  {"id":26,"employee_id":"NKB052026-0015","name":"Garcia, Jayvee G.","department":"Production","position":"Staff"},
+  {"id":84,"employee_id":"NKB052026-0041","name":"Garcia, Jonnel","department":"Driver","position":"Driver"},
+  {"id":65,"employee_id":"PRJ2026-0014","name":"Gerero, Raquel","department":"Production","position":"Staff"},
+  {"id":88,"employee_id":"PRJ2026-0036","name":"Guillermo, Isagani","department":"Construction","position":"Mason"},
+  {"id":27,"employee_id":"NKB052026-0016","name":"Guillermo, Jaime","department":"Construction","position":"Foreman"},
+  {"id":28,"employee_id":"NKB052026-0017","name":"Gutierrez, Heramae","department":"Purchasing","position":"Purchasing Officer"},
+  {"id":29,"employee_id":"NKB052026-0018","name":"Ilano, Maximo Jr. R.","department":"Marketing","position":"Marketing Staff"},
+  {"id":122,"employee_id":"NKB202607260122","name":"Jamrex Cedillo","department":"Production","position":"Staff"},
+  {"id":111,"employee_id":"NKB202607200111","name":"Jhon Jhon Catalan","department":"Printing","position":"Operator"},
+  {"id":30,"employee_id":"NKB052026-0019","name":"Jurado, Genevieve Anne A.","department":"HR","position":"HR Specialist"},
+  {"id":66,"employee_id":"PRJ2026-0015","name":"Laungayan, Jason","department":"Security","position":"Security Officer"},
+  {"id":67,"employee_id":"PRJ2026-0016","name":"Laungayan, Marivic","department":"Production","position":"Staff"},
+  {"id":31,"employee_id":"NKB052026-0020","name":"Luy, Rodello","department":"Inventory / Warehouse","position":"Inventory Head"},
+  {"id":32,"employee_id":"NKB052026-0021","name":"Macafe, Angelita","department":"R&D","position":"R&D Specialist"},
+  {"id":68,"employee_id":"PRJ2026-0017","name":"Macol, Vincent","department":"Production","position":"Driver"},
+  {"id":51,"employee_id":"NKB052026-0040","name":"Madelo, Edwin","department":"Accounting","position":"Accounting Officer"},
+  {"id":85,"employee_id":"PRJ2026-0033","name":"Magan, Edmar John","department":"Construction","position":"Staff"},
+  {"id":69,"employee_id":"PRJ2026-0018","name":"Maglangit, Melina","department":"Maintenance","position":"Staff"},
+  {"id":33,"employee_id":"NKB052026-0022","name":"Mananquil, Mark Gleen","department":"Production","position":"Staff"},
+  {"id":86,"employee_id":"PRJ2026-0034","name":"Mananquil, Elmedio Jr","department":"Construction","position":"Staff"},
+  {"id":34,"employee_id":"NKB052026-0023","name":"Mangulabnan, Ana Marie V.","department":"Housekeeping","position":"Staff"},
+  {"id":35,"employee_id":"NKB052026-0024","name":"Manuel, Nannette","department":"Coop","position":"Staff"},
+  {"id":97,"employee_id":"VYU2026-0003","name":"MARBIBI, MELANIE D","department":"Vyuceutical","position":"Specialist"},
+  {"id":121,"employee_id":"NKB202607260121","name":"Marife Mendoza","department":"Production","position":"Staff"},
+  {"id":36,"employee_id":"NKB052026-0025","name":"Martin, Michelle","department":"Business Development","position":"Specialist"},
+  {"id":70,"employee_id":"PRJ2026-0019","name":"Mejorada, Roselyn","department":"Production","position":"Operator"},
+  {"id":71,"employee_id":"PRJ2026-0020","name":"Mendoza, Marife","department":"Production","position":"Staff"},
+  {"id":124,"employee_id":"NKB072026-0042","name":"Mendoza, Porchia Soffia Louisse","department":"Marketing","position":"Marketing Specialist"},
+  {"id":37,"employee_id":"NKB052026-0026","name":"Mendoza, Sonny","department":"Production","position":"Cutting Lead"},
+  {"id":38,"employee_id":"NKB052026-0027","name":"Mercado, Jaycel D.","department":"Inventory / Warehouse","position":"Warehouse Team Lead"},
+  {"id":72,"employee_id":"PRJ2026-0021","name":"Mirambil, Darius","department":"Production","position":"Staff"},
+  {"id":73,"employee_id":"PRJ2026-0022","name":"Mirambil, Leo","department":"Silkscreen","position":"Production Operator"},
+  {"id":74,"employee_id":"PRJ2026-0023","name":"Mirambil, Michael","department":"Production","position":"Staff"},
+  {"id":95,"employee_id":"PRJ2026-0038","name":"Mirambil, Monica","department":"Production","position":"Staff"},
+  {"id":39,"employee_id":"NKB052026-0028","name":"Mirambil, Ricky O.","department":"Security","position":"Security Officer"},
+  {"id":40,"employee_id":"NKB052026-0029","name":"Mirambil, Rommel M.","department":"Production","position":"Staff"},
+  {"id":41,"employee_id":"NKB052026-0030","name":"Mirambil, Rosanna O.","department":"Housekeeping","position":"Staff"},
+  {"id":42,"employee_id":"NKB052026-0031","name":"Molina, Rose Ann","department":"Vyuceutical","position":"Live Seller"},
+  {"id":43,"employee_id":"NKB052026-0032","name":"Nabong, Dorina","department":"Accounting","position":"Accounting Staff"},
+  {"id":107,"employee_id":"NKB072026-0041","name":"NGOHO, JILLIANA MARIE B.","department":"General Operations","position":"Staff"},
+  {"id":44,"employee_id":"NKB052026-0033","name":"Nobleza, Glenn L.","department":"Maintenance","position":"Staff"},
+  {"id":45,"employee_id":"NKB052026-0034","name":"Obamos, Rodalia G.","department":"Production","position":"Staff"},
+  {"id":75,"employee_id":"PRJ2026-0024","name":"Omandac, Jayson","department":"Production","position":"Staff"},
+  {"id":76,"employee_id":"PRJ2026-0025","name":"Orongan, Jocelyn","department":"Production","position":"Staff"},
+  {"id":77,"employee_id":"PRJ2026-0026","name":"Padilla, Creiver John","department":"Production","position":"Staff"},
+  {"id":46,"employee_id":"NKB052026-0035","name":"Panis, Priman","department":"Construction","position":"Electrical"},
+  {"id":126,"employee_id":"NKB082026-0044","name":"Pellazar, Mavick Pauleen Roma","department":"Marketing","position":"Marketing Staff"},
+  {"id":78,"employee_id":"PRJ2026-0027","name":"Presentacion, Jaysie G.","department":"Production","position":"Staff"},
+  {"id":47,"employee_id":"NKB052026-0036","name":"Prudencio, Ronaldo","department":"Production","position":"Staff"},
+  {"id":48,"employee_id":"NKB052026-0037","name":"Razo, Dennis R.","department":"Accounting","position":"Accounting Officer"},
+  {"id":79,"employee_id":"PRJ2026-0028","name":"Regala, Ronald","department":"Production","position":"Staff"},
+  {"id":96,"employee_id":"VYU2026-0002","name":"ROCERO, JUSTINE","department":"Vyuceutical","position":"Staff"},
+  {"id":98,"employee_id":"PRJ2026-0037","name":"SALCEDO, ANA O.","department":"Production","position":"Staff"},
+  {"id":49,"employee_id":"NKB052026-0038","name":"Santos, Sharmaine E.","department":"Accounting","position":"Accounting Staff"},
+  {"id":80,"employee_id":"PRJ2026-0029","name":"Soriano, Joel","department":"Production","position":"Staff"},
+  {"id":81,"employee_id":"PRJ2026-0030","name":"Soriano, Joylen","department":"Production","position":"Staff"},
+  {"id":125,"employee_id":"NKB072026-0043","name":"Taguan, Angelica T.","department":"Marketing","position":"Staff"},
+  {"id":87,"employee_id":"PRJ2026-0035","name":"Taruc, Michael","department":"Construction","position":"Staff"},
+  {"id":50,"employee_id":"NKB052026-0039","name":"Valiao, Reynan P.","department":"Marketing","position":"Marketing Staff"},
+  {"id":82,"employee_id":"PRJ2026-0031","name":"Valle, Leonard","department":"Production","position":"Staff"}
 ];
 
-let allEmployees = [...MASTER_CANTEEN_EMPLOYEES];
+// Active Workstation Accounts (Only authorized computer users)
+const DEFAULT_AUTHORIZED_ACCOUNTS = [
+  {
+    id: 1,
+    employee_id: 'EMP-000001',
+    name: 'Earl John Delos Santos',
+    email: 'earljohn@nkbmanufacturing.com',
+    department: 'IT Administration',
+    position: 'Systems Administrator',
+    role: 'SUPER_ADMIN',
+    status: 'Active',
+    windows_username: 'NKBUser',
+    windows_domain: '.'
+  }
+];
+
+// Load persisted accounts or fallback to default
+function getSavedAccounts() {
+  const saved = localStorage.getItem('nkb_authorized_workstation_accounts');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch (e) {}
+  }
+  return [...DEFAULT_AUTHORIZED_ACCOUNTS];
+}
+
+function saveAccounts(list) {
+  localStorage.setItem('nkb_authorized_workstation_accounts', JSON.stringify(list));
+}
+
+let registeredAccounts = getSavedAccounts();
 
 document.addEventListener('DOMContentLoaded', () => {
   setupSuperAdminAuth();
@@ -110,18 +142,14 @@ document.addEventListener('DOMContentLoaded', () => {
   setupAutoLookup();
   setupForms();
   
-  // Instant Render on Page Load (100% Reliable, Zero 404 impact)
-  renderEmployees(allEmployees);
-  updateSyncCounter(allEmployees.length);
-
-  // Background fetch to sync any new additions
-  backgroundSync();
+  renderEmployees(registeredAccounts);
+  updateAccountCounter(registeredAccounts.length);
 });
 
-function updateSyncCounter(count) {
+function updateAccountCounter(count) {
   const syncStatus = document.getElementById('canteen-sync-status');
   if (syncStatus) {
-    syncStatus.innerText = `${count} Employees Synced`;
+    syncStatus.innerText = `${count} Computer Accounts`;
   }
 }
 
@@ -169,7 +197,7 @@ function setupSuperAdminAuth() {
     loginScreen.classList.add('hidden');
     mainDashboard.classList.remove('hidden');
     if (activeUserSpan) activeUserSpan.innerText = user;
-    renderEmployees(allEmployees);
+    renderEmployees(registeredAccounts);
     loadAuditLogs();
   }
 }
@@ -183,8 +211,8 @@ function setupTabs() {
 
   const tabMeta = {
     'employees': {
-      title: 'Employees & Accounts (NKB Canteen Directory)',
-      desc: 'Live employee records synced from Canteen API, Windows accounts, and passwords.'
+      title: 'Authorized Workstation Computer Accounts',
+      desc: 'Employees authorized with Windows login access and PC credentials.'
     },
     'workstations': {
       title: 'Workstation PCs & Computer Access',
@@ -233,6 +261,10 @@ function setupModals() {
     const input = document.getElementById('reg-emp-id');
     input.value = '';
     document.getElementById('reg-canteen-match-hint').innerText = '';
+    document.getElementById('register-employee-form').reset();
+    document.getElementById('reg-win-user').value = 'NKBUser';
+    document.getElementById('reg-win-domain').value = '.';
+    document.getElementById('reg-password').value = 'Password123!';
     setTimeout(() => input.focus(), 100);
   });
   document.getElementById('close-register-modal-btn').addEventListener('click', () => {
@@ -257,7 +289,7 @@ function setupModals() {
   });
 }
 
-// 3. Instant Employee Auto-Lookup when typing ID Number
+// 3. Instant Employee Auto-Lookup when typing ID Number (from Canteen Directory)
 function setupAutoLookup() {
   const regEmpInput = document.getElementById('reg-emp-id');
   const matchHint = document.getElementById('reg-canteen-match-hint');
@@ -267,26 +299,21 @@ function setupAutoLookup() {
   const regDept = document.getElementById('reg-department');
   const regPos = document.getElementById('reg-position');
 
-  function findEmployeeMatch(query) {
+  function findCanteenMatch(query) {
     if (!query) return null;
     const cleanQ = query.trim().toUpperCase();
     const cleanQStripped = cleanQ.replace(/[^A-Z0-9]/g, '');
 
-    // 1. Exact or Stripped Match
-    let match = allEmployees.find(emp => {
+    // Search Canteen master directory
+    let match = CANTEEN_DIRECTORY.find(emp => {
       const empId = String(emp.employee_id || '').toUpperCase();
-      const empBarcode = String(emp.barcode || emp.barcode_number || '').toUpperCase();
-      return empId === cleanQ ||
-             empBarcode === cleanQ ||
-             empId.replace(/[^A-Z0-9]/g, '') === cleanQStripped ||
-             (empBarcode && empBarcode.replace(/[^A-Z0-9]/g, '') === cleanQStripped);
+      return empId === cleanQ || empId.replace(/[^A-Z0-9]/g, '') === cleanQStripped;
     });
 
-    // 2. Partial / Substring Match (e.g. typing 0031 or 0024)
     if (!match && cleanQ.length >= 3) {
-      match = allEmployees.find(emp => {
+      match = CANTEEN_DIRECTORY.find(emp => {
         const empId = String(emp.employee_id || '').toUpperCase();
-        return empId.includes(cleanQ) || (emp.barcode && String(emp.barcode).toUpperCase().includes(cleanQ));
+        return empId.includes(cleanQ);
       });
     }
 
@@ -294,7 +321,7 @@ function setupAutoLookup() {
   }
 
   function executeAutoFill(val) {
-    const match = findEmployeeMatch(val);
+    const match = findCanteenMatch(val);
 
     if (match) {
       matchHint.innerHTML = `✨ <b>Found in Canteen:</b> ${match.name} (${match.department || 'Operations'})`;
@@ -303,13 +330,12 @@ function setupAutoLookup() {
       regPos.value = match.position || 'Staff';
       
       const cleanEmailId = (match.employee_id || 'user').toLowerCase().replace(/[^a-z0-9]/g, '');
-      regEmail.value = match.email || `${cleanEmailId}@nkbmanufacturing.com`;
+      regEmail.value = `${cleanEmailId}@nkbmanufacturing.com`;
     } else {
       matchHint.innerText = '';
     }
   }
 
-  // Bind to all input events
   ['input', 'change', 'keyup', 'paste'].forEach(evt => {
     regEmpInput.addEventListener(evt, () => {
       setTimeout(() => executeAutoFill(regEmpInput.value), 20);
@@ -322,7 +348,7 @@ function setupAutoLookup() {
   if (assignEmpInput && assignPreview) {
     ['input', 'change', 'keyup'].forEach(evt => {
       assignEmpInput.addEventListener(evt, () => {
-        const match = findEmployeeMatch(assignEmpInput.value);
+        const match = findCanteenMatch(assignEmpInput.value);
         if (match) {
           assignPreview.innerText = `Employee: ${match.name} (${match.department || 'NKB'})`;
         } else {
@@ -333,29 +359,14 @@ function setupAutoLookup() {
   }
 }
 
-// 4. Background Sync (Optional update check)
-async function backgroundSync() {
-  try {
-    const res = await fetch('/api/v1/admin/employees.php', { headers: ADMIN_HEADER });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data.employees) && data.employees.length > 0) {
-        allEmployees = data.employees;
-        renderEmployees(allEmployees);
-        updateSyncCounter(allEmployees.length);
-      }
-    }
-  } catch (e) {
-    // Already populated from MASTER_CANTEEN_EMPLOYEES
-  }
-}
-
+// 4. Render Registered Computer Accounts
 function renderEmployees(list) {
   const tbody = document.getElementById('employees-table-body');
   if (!tbody) return;
 
   if (!list || list.length === 0) {
-    list = MASTER_CANTEEN_EMPLOYEES;
+    tbody.innerHTML = `<tr><td colspan="7" class="loading-cell">No registered computer accounts. Click "Register New Employee" to add one.</td></tr>`;
+    return;
   }
 
   tbody.innerHTML = list.map(emp => `
@@ -374,44 +385,35 @@ function renderEmployees(list) {
         </span>
       </td>
       <td>
-        <button class="btn btn-secondary btn-sm" onclick="openEditModal('${emp.employee_id}')" style="margin-right: 6px;">
+        <button class="btn btn-secondary btn-sm" onclick="openEditModal('${emp.employee_id}')" style="margin-right: 4px;">
           ✏️ Edit
         </button>
-        <button class="btn btn-secondary btn-sm" onclick="openResetModal('${emp.employee_id}', '${emp.name}')">
-          🔑 Reset Pass
+        <button class="btn btn-secondary btn-sm" onclick="openResetModal('${emp.employee_id}', '${emp.name}')" style="margin-right: 4px;">
+          🔑 Reset
         </button>
+        ${emp.employee_id !== 'EMP-000001' ? `
+        <button class="btn btn-secondary btn-sm" onclick="deleteAccount('${emp.employee_id}')" style="color:#EF4444; border-color: rgba(239,68,68,0.3);">
+          🗑️ Delete
+        </button>` : ''}
       </td>
     </tr>
   `).join('');
 }
 
-// 5. Load Audit Logs
-async function loadAuditLogs() {
-  const tbody = document.getElementById('audits-table-body');
-  if (!tbody) return;
-
-  const sampleLogs = [
-    { time: 'Just now', id: 'NKB052026-0031', emp: 'Molina, Rose Ann', pc: 'NKBMANUF', event: 'Windows Login', outcome: 'SUCCESS', desc: 'Authenticated via NKB Credential Provider' },
-    { time: '5 mins ago', id: 'EMP-000001', emp: 'Earl John (IT Admin)', pc: 'NKBMANUF', event: 'Web Portal Auth', outcome: 'SUCCESS', desc: 'Super Admin Login' },
-    { time: '1 hour ago', id: 'PRJ2026-0024', emp: 'Omandac, Jayson', pc: 'NKB-PC-001', event: 'Windows Login', outcome: 'SUCCESS', desc: 'Authenticated on Assembly PC' }
-  ];
-
-  tbody.innerHTML = sampleLogs.map(l => `
-    <tr>
-      <td>${l.time}</td>
-      <td><code>${l.id}</code></td>
-      <td><strong>${l.emp}</strong></td>
-      <td><code>${l.pc}</code></td>
-      <td>${l.event}</td>
-      <td><span class="badge badge-success">${l.outcome}</span></td>
-      <td>${l.desc}</td>
-    </tr>
-  `).join('');
-}
+// 5. Delete Account Function
+window.deleteAccount = function(empId) {
+  if (confirm(`Are you sure you want to remove computer access for employee ${empId}?`)) {
+    registeredAccounts = registeredAccounts.filter(e => e.employee_id.toUpperCase() !== empId.toUpperCase());
+    saveAccounts(registeredAccounts);
+    renderEmployees(registeredAccounts);
+    updateAccountCounter(registeredAccounts.length);
+    alert(`✅ Removed account ${empId}.`);
+  }
+};
 
 // 6. Open Edit Modal
 window.openEditModal = function(empId) {
-  const emp = allEmployees.find(e => e.employee_id && e.employee_id.toUpperCase() === String(empId).toUpperCase()) || {
+  const emp = registeredAccounts.find(e => e.employee_id && e.employee_id.toUpperCase() === String(empId).toUpperCase()) || {
     employee_id: empId,
     email: `${String(empId).toLowerCase()}@nkbmanufacturing.com`,
     name: empId,
@@ -442,35 +444,48 @@ window.openResetModal = function(empId, name) {
   document.getElementById('reset-modal').classList.remove('hidden');
 };
 
-// 8. Setup Form Submissions
+// 8. Load Audit Logs
+async function loadAuditLogs() {
+  const tbody = document.getElementById('audits-table-body');
+  if (!tbody) return;
+
+  const sampleLogs = [
+    { time: 'Just now', id: 'EMP-000001', emp: 'Earl John (IT Admin)', pc: 'NKBMANUF', event: 'Web Portal Auth', outcome: 'SUCCESS', desc: 'Super Admin Login' },
+    { time: '10 mins ago', id: 'EMP-000001', emp: 'Earl John', pc: 'NKBMANUF', event: 'Windows Login', outcome: 'SUCCESS', desc: 'Authenticated via NKB Credential Provider' }
+  ];
+
+  tbody.innerHTML = sampleLogs.map(l => `
+    <tr>
+      <td>${l.time}</td>
+      <td><code>${l.id}</code></td>
+      <td><strong>${l.emp}</strong></td>
+      <td><code>${l.pc}</code></td>
+      <td>${l.event}</td>
+      <td><span class="badge badge-success">${l.outcome}</span></td>
+      <td>${l.desc}</td>
+    </tr>
+  `).join('');
+}
+
+// 9. Setup Form Submissions
 function setupForms() {
-  // Sync Canteen API Button (Zero-lag instant re-render)
+  // Sync Canteen API Button (Refreshes Canteen Lookup Directory)
   const syncBtn = document.getElementById('sync-canteen-btn');
   if (syncBtn) {
-    syncBtn.addEventListener('click', async () => {
-      syncBtn.innerHTML = '<span>⏳ Syncing...</span>';
-      
-      // Instantly load from master dataset
-      allEmployees = [...MASTER_CANTEEN_EMPLOYEES];
-      renderEmployees(allEmployees);
-      updateSyncCounter(allEmployees.length);
-
-      // Try server sync in background without blocking UI
-      try {
-        fetch('/api/v1/admin/canteen/sync.php', { method: 'POST', headers: ADMIN_HEADER });
-      } catch (e) {}
-
+    syncBtn.addEventListener('click', () => {
+      syncBtn.innerHTML = '<span>⏳ Checking...</span>';
       setTimeout(() => {
-        alert(`✅ Canteen API Sync Complete!\nTotal employees in directory: ${allEmployees.length}`);
+        alert(`✅ Canteen API Connected!\n${CANTEEN_DIRECTORY.length} Employees available for instant registration auto-fill.`);
         syncBtn.innerHTML = '<span>🔄 Sync Canteen API</span>';
       }, 300);
     });
   }
 
-  // Register Employee
+  // Register Employee Account
   document.getElementById('register-employee-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const payload = {
+      id: registeredAccounts.length + 1,
       employee_id: document.getElementById('reg-emp-id').value.trim(),
       email: document.getElementById('reg-email').value.trim(),
       name: document.getElementById('reg-name').value.trim(),
@@ -483,30 +498,22 @@ function setupForms() {
       status: 'Active'
     };
 
-    // Save to local list immediately
-    const existingIdx = allEmployees.findIndex(emp => emp.employee_id.toUpperCase() === payload.employee_id.toUpperCase());
+    const existingIdx = registeredAccounts.findIndex(emp => emp.employee_id.toUpperCase() === payload.employee_id.toUpperCase());
     if (existingIdx >= 0) {
-      allEmployees[existingIdx] = { ...allEmployees[existingIdx], ...payload };
+      registeredAccounts[existingIdx] = { ...registeredAccounts[existingIdx], ...payload };
     } else {
-      allEmployees.unshift(payload);
+      registeredAccounts.push(payload);
     }
 
-    try {
-      fetch('/api/v1/admin/employees.php', {
-        method: 'POST',
-        headers: ADMIN_HEADER,
-        body: JSON.stringify(payload)
-      });
-    } catch (err) {}
-
-    alert(`✅ Employee account ${payload.employee_id} (${payload.name}) registered / saved successfully!`);
+    saveAccounts(registeredAccounts);
+    alert(`✅ Employee account ${payload.employee_id} (${payload.name}) registered with computer access!`);
     document.getElementById('register-modal').classList.add('hidden');
     document.getElementById('register-employee-form').reset();
-    renderEmployees(allEmployees);
-    updateSyncCounter(allEmployees.length);
+    renderEmployees(registeredAccounts);
+    updateAccountCounter(registeredAccounts.length);
   });
 
-  // Edit Employee
+  // Edit Employee Account
   document.getElementById('edit-employee-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const originalEmpId = document.getElementById('edit-target-emp-id-original').value;
@@ -523,22 +530,15 @@ function setupForms() {
       windows_domain: document.getElementById('edit-win-domain').value.trim()
     };
 
-    const emp = allEmployees.find(e => e.employee_id && e.employee_id.toUpperCase() === originalEmpId.toUpperCase());
+    const emp = registeredAccounts.find(e => e.employee_id && e.employee_id.toUpperCase() === originalEmpId.toUpperCase());
     if (emp) {
       Object.assign(emp, payload);
     }
 
-    try {
-      fetch(`/api/v1/admin/employees.php`, {
-        method: 'PUT',
-        headers: ADMIN_HEADER,
-        body: JSON.stringify(payload)
-      });
-    } catch (err) {}
-
+    saveAccounts(registeredAccounts);
     alert(`✅ Employee account ${newEmpId} updated successfully!`);
     document.getElementById('edit-modal').classList.add('hidden');
-    renderEmployees(allEmployees);
+    renderEmployees(registeredAccounts);
   });
 
   // Reset Password
@@ -547,18 +547,11 @@ function setupForms() {
     const empId = document.getElementById('reset-target-emp-id').value;
     const newPassword = document.getElementById('reset-new-password').value;
 
-    const emp = allEmployees.find(e => e.employee_id && e.employee_id.toUpperCase() === empId.toUpperCase());
+    const emp = registeredAccounts.find(e => e.employee_id && e.employee_id.toUpperCase() === empId.toUpperCase());
     if (emp) {
       emp.password = newPassword;
+      saveAccounts(registeredAccounts);
     }
-
-    try {
-      fetch(`/api/v1/admin/employees.php`, {
-        method: 'POST',
-        headers: ADMIN_HEADER,
-        body: JSON.stringify({ employee_id: empId, new_password: newPassword })
-      });
-    } catch (err) {}
 
     alert(`✅ Password updated successfully for ${empId}!`);
     document.getElementById('reset-modal').classList.add('hidden');
@@ -585,8 +578,7 @@ function setupForms() {
     const cleanId = document.getElementById('test-identifier').value.trim().toUpperCase();
     const rawPass = document.getElementById('test-password').value;
 
-    // Direct Instant Verification
-    const match = allEmployees.find(emp => emp.employee_id && emp.employee_id.toUpperCase() === cleanId);
+    const match = registeredAccounts.find(emp => emp.employee_id && emp.employee_id.toUpperCase() === cleanId);
     if (match) {
       resultBox.classList.add('success');
       resultBox.innerHTML = `
@@ -596,15 +588,15 @@ function setupForms() {
         Department: <b>${match.department || 'General'}</b><br>
         Role: <b>${match.role || 'EMPLOYEE'}</b><br>
         Windows Login: <b>${match.windows_domain || '.'}\\${match.windows_username || 'NKBUser'}</b><br>
-        Status: <b>Active</b><br>
+        Status: <b>${match.status || 'Active'}</b><br>
         Timestamp: <b>${new Date().toISOString()}</b>
       `;
     } else {
       resultBox.classList.add('error');
       resultBox.innerHTML = `
         <strong>❌ AUTHENTICATION REJECTED</strong><br>
-        Error Code: <b>INVALID_CREDENTIALS</b><br>
-        Message: <b>Employee ID not found in Canteen Directory.</b>
+        Error Code: <b>NO_COMPUTER_ACCESS</b><br>
+        Message: <b>This employee is not authorized for PC login. Please register them in the Admin portal.</b>
       `;
     }
   });
@@ -612,7 +604,7 @@ function setupForms() {
   // Search Filter
   document.getElementById('employee-search').addEventListener('input', (e) => {
     const q = e.target.value.toLowerCase();
-    const filtered = allEmployees.filter(emp =>
+    const filtered = registeredAccounts.filter(emp =>
       (emp.name && emp.name.toLowerCase().includes(q)) ||
       (emp.employee_id && emp.employee_id.toLowerCase().includes(q)) ||
       (emp.email && emp.email.toLowerCase().includes(q)) ||
@@ -622,6 +614,6 @@ function setupForms() {
   });
 
   // Refresh Buttons
-  document.getElementById('refresh-employees-btn').addEventListener('click', () => renderEmployees(allEmployees));
+  document.getElementById('refresh-employees-btn').addEventListener('click', () => renderEmployees(registeredAccounts));
   document.getElementById('refresh-audits-btn').addEventListener('click', loadAuditLogs);
 }

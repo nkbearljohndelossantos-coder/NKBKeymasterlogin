@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260816_2">
+  <link rel="stylesheet" href="style.css?v=20260816_3">
 </head>
 <body>
   <!-- SUPER ADMIN LOGIN OVERLAY -->
@@ -51,7 +51,7 @@
       <nav class="sidebar-nav">
         <button class="nav-item active" data-tab="employees">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-          <span>Employees & Accounts</span>
+          <span>Computer Accounts</span>
         </button>
         <button class="nav-item" data-tab="workstations">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
@@ -74,11 +74,11 @@
       <div class="system-status-widget" style="margin-bottom: 12px;">
         <div class="status-indicator online"></div>
         <div class="status-details">
-          <span class="status-title">NKB Canteen Connected</span>
-          <span class="status-sub" id="canteen-sync-status">Auto-Syncing</span>
+          <span class="status-title">Canteen Directory Ready</span>
+          <span class="status-sub" id="canteen-sync-status">Auto-Lookup Enabled</span>
         </div>
       </div>
-      <button class="btn btn-secondary btn-sm" id="logout-btn">Log Out</button>
+      <button class="btn btn-secondary btn-sm w-full" id="logout-btn">Log Out</button>
     </aside>
 
     <!-- Main Content Area -->
@@ -86,13 +86,10 @@
       <!-- Top Header -->
       <header class="top-header">
         <div class="header-titles">
-          <h1 id="page-title">Employees & Accounts</h1>
-          <p id="page-description">Manage employee login credentials, NKB emails, passwords, and Windows mapping.</p>
+          <h1 id="page-title">Authorized Workstation Computer Accounts</h1>
+          <p id="page-description">Manage employees authorized with Windows login access and PC credentials.</p>
         </div>
         <div class="header-actions" style="display: flex; gap: 10px;">
-          <button class="btn btn-secondary" id="sync-canteen-btn">
-            <span>🔄 Sync Canteen API</span>
-          </button>
           <button class="btn btn-primary" id="open-register-modal-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             <span>Register New Employee</span>
@@ -100,7 +97,7 @@
         </div>
       </header>
 
-      <!-- TAB 1: EMPLOYEES -->
+      <!-- TAB 1: EMPLOYEES / COMPUTER ACCOUNTS -->
       <section class="tab-pane active" id="pane-employees">
         <div class="card">
           <div class="table-toolbar">
@@ -118,11 +115,11 @@
                   <th>Windows Mapping</th>
                   <th>Role</th>
                   <th>Status</th>
-                  <th style="min-width: 180px;">Actions</th>
+                  <th style="min-width: 220px;">Actions</th>
                 </tr>
               </thead>
               <tbody id="employees-table-body">
-                <tr><td colspan="7" class="loading-cell">Loading employee records...</td></tr>
+                <tr><td colspan="7" class="loading-cell">Loading authorized accounts...</td></tr>
               </tbody>
             </table>
           </div>
@@ -169,11 +166,6 @@
                 <tr>
                   <td><code>NKBMANUF</code></td>
                   <td><code>EMP-000001 (Earl John)</code></td>
-                  <td><span class="badge badge-success">Authorized</span></td>
-                </tr>
-                <tr>
-                  <td><code>NKB-PC-001</code></td>
-                  <td><code>All Active Canteen Employees</code></td>
                   <td><span class="badge badge-success">Authorized</span></td>
                 </tr>
               </tbody>
@@ -247,12 +239,12 @@
         <div class="card max-w-md">
           <div class="card-header">
             <h3>Simulate Windows Credential Provider Login</h3>
-            <p>Test if an Employee ID (e.g. from Canteen) authenticates cleanly against policy.</p>
+            <p>Test if an Employee ID authenticates cleanly for PC login.</p>
           </div>
           <form id="test-login-form">
             <div class="form-group">
-              <label>NKB Email / Canteen Employee ID</label>
-              <input type="text" id="test-identifier" placeholder="e.g. NKB052026-0031 or EMP-000001" required>
+              <label>NKB Email / Employee ID</label>
+              <input type="text" id="test-identifier" placeholder="e.g. EMP-000001 or NKB052026-0031" required>
             </div>
             <div class="form-group">
               <label>Password</label>
@@ -274,14 +266,14 @@
   <div class="modal-overlay hidden" id="register-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Register New NKB Employee Account</h3>
+        <h3>Register New Employee for PC Access</h3>
         <button class="modal-close-btn" id="close-register-modal-btn">&times;</button>
       </div>
       <form id="register-employee-form">
         <div class="form-row">
           <div class="form-group">
-            <label>Employee ID / Number * (Auto-Detects Canteen Info)</label>
-            <input type="text" id="reg-emp-id" placeholder="e.g. NKB052026-0031 or EMP-000555" required autocomplete="off">
+            <label>Employee ID / Number * (Type ID to Auto-Fill Info)</label>
+            <input type="text" id="reg-emp-id" placeholder="e.g. NKB052026-0031 or PRJ2026-0024" required autocomplete="off">
             <span id="reg-canteen-match-hint" style="font-size:0.75rem; color:#10B981; margin-top:4px; font-weight:600;"></span>
           </div>
           <div class="form-group">
@@ -336,7 +328,7 @@
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="cancel-register-modal-btn">Cancel</button>
-          <button type="submit" class="btn btn-primary">Create / Save Account</button>
+          <button type="submit" class="btn btn-primary">Authorize & Save Account</button>
         </div>
       </form>
     </div>
@@ -432,6 +424,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260816_v2"></script>
+  <script src="app.js?v=20260816_v3"></script>
 </body>
 </html>
