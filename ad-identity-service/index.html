@@ -101,7 +101,7 @@
       <section class="tab-pane active" id="pane-employees">
         <div class="card">
           <div class="table-toolbar">
-            <input type="text" id="employee-search" placeholder="Search by Name, Employee ID, or Email..." class="search-input">
+            <input type="text" id="employee-search" placeholder="Search by Name, Employee ID, Department, or Email..." class="search-input">
             <button class="btn btn-secondary" id="refresh-employees-btn">Refresh List</button>
           </div>
 
@@ -137,6 +137,7 @@
             <div class="form-group">
               <label>Employee ID</label>
               <input type="text" id="assign-emp-id" placeholder="e.g. EMP-000001 or NKB052026-0031" required>
+              <span id="assign-emp-preview" style="font-size:0.75rem; color:#10B981; margin-top:4px;"></span>
             </div>
             <div class="form-group">
               <label>Computer Hostname</label>
@@ -266,7 +267,7 @@
     </main>
   </div>
 
-  <!-- MODAL 1: REGISTER EMPLOYEE -->
+  <!-- MODAL 1: REGISTER EMPLOYEE WITH AUTO-LOOKUP -->
   <div class="modal-overlay hidden" id="register-modal">
     <div class="modal-card">
       <div class="modal-header">
@@ -276,8 +277,9 @@
       <form id="register-employee-form">
         <div class="form-row">
           <div class="form-group">
-            <label>Employee ID / Number *</label>
-            <input type="text" id="reg-emp-id" placeholder="EMP-000555" required>
+            <label>Employee ID / Number * (Auto-Detects Canteen Info)</label>
+            <input type="text" id="reg-emp-id" placeholder="e.g. NKB052026-0031 or EMP-000555" required autocomplete="off">
+            <span id="reg-canteen-match-hint" style="font-size:0.75rem; color:#10B981; margin-top:4px; font-weight:600;"></span>
           </div>
           <div class="form-group">
             <label>NKB Email Address *</label>
@@ -326,12 +328,12 @@
 
         <div class="form-group">
           <label>Password *</label>
-          <input type="password" id="reg-password" placeholder="Enter password (e.g. Password123!)" required>
+          <input type="password" id="reg-password" placeholder="Enter password (e.g. Password123!)" value="Password123!" required>
         </div>
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="cancel-register-modal-btn">Cancel</button>
-          <button type="submit" class="btn btn-primary">Create Account</button>
+          <button type="submit" class="btn btn-primary">Create / Save Account</button>
         </div>
       </form>
     </div>

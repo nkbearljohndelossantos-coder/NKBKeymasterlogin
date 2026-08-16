@@ -1,5 +1,5 @@
 // NKB Keymaster IT Management Portal Client Logic
-// Connected to NKB Canteen API
+// Connected to NKB Canteen API with Instant Employee Auto-Lookup
 
 const ADMIN_HEADER = {
   'Content-Type': 'application/json',
@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSuperAdminAuth();
   setupTabs();
   setupModals();
+  setupAutoLookup();
   setupForms();
 });
 
@@ -123,6 +124,7 @@ function setupModals() {
   // Register Modal
   document.getElementById('open-register-modal-btn').addEventListener('click', () => {
     registerModal.classList.remove('hidden');
+    document.getElementById('reg-emp-id').focus();
   });
   document.getElementById('close-register-modal-btn').addEventListener('click', () => {
     registerModal.classList.add('hidden');
@@ -148,7 +150,57 @@ function setupModals() {
   });
 }
 
-// 3. Load & Render Employees
+// 3. Instant Employee Auto-Lookup when typing ID Number
+function setupAutoLookup() {
+  const regEmpInput = document.getElementById('reg-emp-id');
+  const matchHint = document.getElementById('reg-canteen-match-hint');
+
+  const regName = document.getElementById('reg-name');
+  const regEmail = document.getElementById('reg-email');
+  const regDept = document.getElementById('reg-department');
+  const regPos = document.getElementById('reg-position');
+
+  regEmpInput.addEventListener('input', (e) => {
+    const enteredId = e.target.value.trim().toUpperCase();
+    if (!enteredId) {
+      matchHint.innerText = '';
+      return;
+    }
+
+    // Search in Canteen Synced Employees
+    const match = allEmployees.find(emp =>
+      emp.employee_id.toUpperCase() === enteredId ||
+      (emp.barcode && emp.barcode.toUpperCase() === enteredId)
+    );
+
+    if (match) {
+      matchHint.innerText = `✨ Found: ${match.name} (${match.department || 'Operations'})`;
+      regName.value = match.name || '';
+      regDept.value = match.department || '';
+      regPos.value = match.position || '';
+      regEmail.value = match.email || `${match.employee_id.toLowerCase().replace(/[^a-z0-9]/g, '')}@nkbmanufacturing.com`;
+    } else {
+      matchHint.innerText = '';
+    }
+  });
+
+  // Workstation PC ID preview
+  const assignEmpInput = document.getElementById('assign-emp-id');
+  const assignPreview = document.getElementById('assign-emp-preview');
+  if (assignEmpInput && assignPreview) {
+    assignEmpInput.addEventListener('input', (e) => {
+      const q = e.target.value.trim().toUpperCase();
+      const match = allEmployees.find(emp => emp.employee_id.toUpperCase() === q);
+      if (match) {
+        assignPreview.innerText = `Employee: ${match.name} (${match.department || 'NKB'})`;
+      } else {
+        assignPreview.innerText = '';
+      }
+    });
+  }
+}
+
+// 4. Load & Render Employees
 async function loadEmployees() {
   const tbody = document.getElementById('employees-table-body');
   try {
@@ -199,7 +251,7 @@ function renderEmployees(list) {
   `).join('');
 }
 
-// 4. Load Audit Logs
+// 5. Load Audit Logs
 async function loadAuditLogs() {
   const tbody = document.getElementById('audits-table-body');
   if (!tbody) return;
@@ -223,7 +275,7 @@ async function loadAuditLogs() {
   `).join('');
 }
 
-// 5. Open Edit Modal
+// 6. Open Edit Modal
 window.openEditModal = function(empId) {
   const emp = allEmployees.find(e => e.employee_id.toUpperCase() === empId.toUpperCase()) || {
     employee_id: empId,
@@ -249,14 +301,14 @@ window.openEditModal = function(empId) {
   document.getElementById('edit-modal').classList.remove('hidden');
 };
 
-// 6. Open Reset Password Modal
+// 7. Open Reset Password Modal
 window.openResetModal = function(empId, name) {
   document.getElementById('reset-target-emp-id').value = empId;
   document.getElementById('reset-target-text').innerHTML = `Resetting password for: <strong>${name} (${empId})</strong>`;
   document.getElementById('reset-modal').classList.remove('hidden');
 };
 
-// 7. Setup Form Submissions
+// 8. Setup Form Submissions
 function setupForms() {
   // Sync Canteen API Button
   const syncBtn = document.getElementById('sync-canteen-btn');
