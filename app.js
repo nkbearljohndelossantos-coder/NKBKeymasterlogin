@@ -458,10 +458,12 @@ function renderEmployees(list) {
   }
 
   tbody.innerHTML = list.map(emp => {
+    const effectiveRole = (emp.role && emp.role.trim() !== '') ? emp.role.trim() : ((emp.employee_id === 'EMP-000001' || emp.employee_id === 'NKB052026-0014') ? 'SUPER_ADMIN' : 'EMPLOYEE');
+
     let roleBadgeClass = 'badge-success';
-    if (emp.role === 'SUPER_ADMIN') roleBadgeClass = 'badge-danger';
-    else if (emp.role === 'IT_ADMIN') roleBadgeClass = 'badge-info';
-    else if (emp.role === 'HR_MANAGER' || emp.role === 'SUPERVISOR') roleBadgeClass = 'badge-warning';
+    if (effectiveRole === 'SUPER_ADMIN' || effectiveRole === 'Admin') roleBadgeClass = 'badge-danger';
+    else if (effectiveRole === 'IT_ADMIN' || effectiveRole === 'IT Admin') roleBadgeClass = 'badge-info';
+    else if (effectiveRole === 'HR_MANAGER' || effectiveRole === 'SUPERVISOR' || effectiveRole === 'Manager') roleBadgeClass = 'badge-warning';
 
     return `
     <tr>
@@ -472,7 +474,7 @@ function renderEmployees(list) {
       </td>
       <td>${emp.department || 'General'}${emp.position ? ` / ${emp.position}` : ''}</td>
       <td><code>${emp.windows_domain || '.'}\\${emp.windows_username || 'NKBUser'}</code></td>
-      <td><span class="badge ${roleBadgeClass}">${emp.role || 'EMPLOYEE'}</span></td>
+      <td><span class="badge ${roleBadgeClass}">${effectiveRole}</span></td>
       <td>
         <span class="badge ${emp.status === 'Active' ? 'badge-success' : 'badge-danger'}">
           ${emp.status || 'Active'}
