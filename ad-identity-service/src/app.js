@@ -105,7 +105,12 @@ async function initDatabaseSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // 3. Try to add windows_username & windows_domain to employees table if missing
+    // 3. Modify role column to VARCHAR(100) so it accepts SUPER_ADMIN, IT_ADMIN, etc.
+    try {
+      await conn.query("ALTER TABLE `employees` MODIFY COLUMN `role` VARCHAR(100) NOT NULL DEFAULT 'EMPLOYEE'");
+    } catch (e) {}
+
+    // 4. Try to add windows_username & windows_domain to employees table if missing
     try {
       await conn.query("ALTER TABLE `employees` ADD COLUMN `windows_username` VARCHAR(100) DEFAULT 'NKBUser'");
     } catch (e) {}
@@ -113,9 +118,10 @@ async function initDatabaseSchema() {
       await conn.query("ALTER TABLE `employees` ADD COLUMN `windows_domain` VARCHAR(100) DEFAULT '.'");
     } catch (e) {}
 
-    // 4. Enforce SUPER_ADMIN Role for Earl John
+    // 5. Enforce SUPER_ADMIN Role for Earl John & Fix Empty Roles
     try {
       await conn.query("UPDATE `employees` SET `role` = 'SUPER_ADMIN' WHERE `employee_id` IN ('EMP-000001', 'NKB052026-0014') OR `email` IN ('earljohn@nkbmanufacturing.com', 'itstaff@nkbmanufacturing.com')");
+      await conn.query("UPDATE `employees` SET `role` = 'EMPLOYEE' WHERE `role` = '' OR `role` IS NULL");
     } catch (e) {}
 
     console.log('[MySQL] Database Schema & Super Admin Role Verified.');
