@@ -113,7 +113,12 @@ async function initDatabaseSchema() {
       await conn.query("ALTER TABLE `employees` ADD COLUMN `windows_domain` VARCHAR(100) DEFAULT '.'");
     } catch (e) {}
 
-    console.log('[MySQL] Database Schema Verified & Synchronized.');
+    // 4. Enforce SUPER_ADMIN Role for Earl John
+    try {
+      await conn.query("UPDATE `employees` SET `role` = 'SUPER_ADMIN' WHERE `employee_id` IN ('EMP-000001', 'NKB052026-0014') OR `email` IN ('earljohn@nkbmanufacturing.com', 'itstaff@nkbmanufacturing.com')");
+    } catch (e) {}
+
+    console.log('[MySQL] Database Schema & Super Admin Role Verified.');
   } catch (e) {
     console.error('[MySQL Init Schema Error]', e.message);
   } finally {
