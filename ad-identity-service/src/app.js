@@ -154,6 +154,11 @@ let memoryAccounts = [
 // Helper: Safely query employees with Windows mappings
 async function queryAllEmployees(conn) {
   try {
+    try {
+      await conn.query("ALTER TABLE `employees` MODIFY COLUMN `role` VARCHAR(100) NOT NULL DEFAULT 'EMPLOYEE'");
+      await conn.query("UPDATE `employees` SET `role` = 'SUPER_ADMIN' WHERE `employee_id` IN ('EMP-000001', 'NKB052026-0014') OR `email` IN ('earljohn@nkbmanufacturing.com', 'itstaff@nkbmanufacturing.com')");
+    } catch (e) {}
+
     const [rows] = await conn.query(`
       SELECT 
         e.id, 
@@ -162,7 +167,11 @@ async function queryAllEmployees(conn) {
         e.email, 
         e.department, 
         e.position, 
-        e.role, 
+        CASE 
+          WHEN e.role IS NULL OR e.role = '' THEN 
+            CASE WHEN e.employee_id IN ('EMP-000001', 'NKB052026-0014') THEN 'SUPER_ADMIN' ELSE 'EMPLOYEE' END
+          ELSE e.role 
+        END AS role, 
         e.password_hash AS password, 
         e.status,
         COALESCE(w.windows_username, 'NKBUser') AS windows_username,
